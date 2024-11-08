@@ -1,2 +1,3 @@
 (library
- (name gameboy))
+ (name gameboy)
+ (libraries stdint))

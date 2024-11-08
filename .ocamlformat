@@ -1,4 +1,4 @@
-profile=ocamlformat
+profile=default
 
 cases-exp-indent=4
 extension-indent=4
@@ -17,5 +17,7 @@ space-around-records=true
 break-cases=all
 
 break-infix=fit-or-vertical
+sequence-style=terminator
 
 margin=100
+max-indent=20

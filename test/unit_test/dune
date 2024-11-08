@@ -1,0 +1,6 @@
+(library
+ (name gameboy_unit_test)
+ (libraries gameboy)
+ (inline_tests)
+ (preprocess
+  (pps ppx_jane)))
