@@ -1,0 +1,4 @@
+(executable
+ (public_name gameboy)
+ (name main)
+ (libraries gameboy))
