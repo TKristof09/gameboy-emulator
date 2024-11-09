@@ -33,7 +33,7 @@ type flags =
     | Sub
     | Zero
 
-let uint16_of_uint8s high low =
+let uint16_of_uint8s low high =
     let high = Uint16.shift_left (Uint16.of_uint8 high) 8
     and low = Uint16.of_uint8 low in
     Uint16.logor high low
@@ -68,10 +68,10 @@ let read_r8 t reg =
 
 let read_r16 t reg =
     match reg with
-    | AF -> uint16_of_uint8s t.a t.f
-    | BC -> uint16_of_uint8s t.b t.c
-    | DE -> uint16_of_uint8s t.d t.e
-    | HL -> uint16_of_uint8s t.h t.l
+    | AF -> uint16_of_uint8s t.f t.a
+    | BC -> uint16_of_uint8s t.c t.b
+    | DE -> uint16_of_uint8s t.e t.d
+    | HL -> uint16_of_uint8s t.l t.h
 
 let write_r8 t reg value =
     match reg with
@@ -123,3 +123,34 @@ let read_flag t flag =
     | Half_carry -> Uint8.(logand t.f (of_int 0x20)) <> Uint8.zero
     | Sub -> Uint8.(logand t.f (of_int 0x40)) <> Uint8.zero
     | Zero -> Uint8.(logand t.f (of_int 0x80)) <> Uint8.zero
+
+let set_flags t ?(c = read_flag t Carry) ?(h = read_flag t Half_carry) ?(s = read_flag t Sub)
+    ?(z = read_flag t Zero) () =
+    if c then set_flag t Carry else unset_flag t Carry;
+    if h then set_flag t Half_carry else unset_flag t Half_carry;
+    if s then set_flag t Sub else unset_flag t Sub;
+    if z then set_flag t Zero else unset_flag t Zero
+
+let show_r8 r =
+    match r with
+    | A -> "A"
+    | B -> "B"
+    | C -> "C"
+    | D -> "D"
+    | E -> "E"
+    | F -> "F"
+    | H -> "H"
+    | L -> "L"
+
+let show_r16 r =
+    match r with
+    | AF -> "AF"
+    | BC -> "BC"
+    | DE -> "DE"
+    | HL -> "HL"
+
+let show t =
+    Printf.sprintf "A: %s B: %s C: %s D: %s E: %s F: %s H: %s L: %s" (Uint8.to_string_hex t.a)
+      (Uint8.to_string_hex t.b) (Uint8.to_string_hex t.c) (Uint8.to_string_hex t.d)
+      (Uint8.to_string_hex t.e) (Uint8.to_string_hex t.f) (Uint8.to_string_hex t.h)
+      (Uint8.to_string_hex t.l)

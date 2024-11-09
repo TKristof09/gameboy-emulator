@@ -42,3 +42,14 @@ let%expect_test "test set, unset and read flag" =
     let zero = Registers.read_flag t Zero in
     Printf.printf "%b %b %b %b" carry half_carry sub zero;
     [%expect {|true false false true|}]
+
+let%expect_test "test set multiple flags" =
+    let t = Registers.create () in
+    Registers.set_flag t Carry;
+    Registers.set_flags t ~c:false ~h:false ~s:false ~z:true ();
+    let carry = Registers.read_flag t Carry in
+    let half_carry = Registers.read_flag t Half_carry in
+    let sub = Registers.read_flag t Sub in
+    let zero = Registers.read_flag t Zero in
+    Printf.printf "%b %b %b %b" carry half_carry sub zero;
+    [%expect {|false false false true|}]

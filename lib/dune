@@ -1,3 +1,5 @@
 (library
  (name gameboy)
- (libraries stdint))
+ (libraries stdint)
+ (preprocess
+  (pps ppx_deriving.show)))
