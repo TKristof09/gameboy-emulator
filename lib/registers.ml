@@ -1,4 +1,4 @@
-open Stdint
+open Uint
 
 type t = {
     mutable a : Uint8.t;
@@ -33,16 +33,6 @@ type flags =
     | Sub
     | Zero
 
-let uint16_of_uint8s low high =
-    let high = Uint16.shift_left (Uint16.of_uint8 high) 8
-    and low = Uint16.of_uint8 low in
-    Uint16.logor high low
-
-let uint8s_of_uint16 value =
-    let high = Uint16.to_uint8 (Uint16.shift_right_logical value 8)
-    and low = Uint16.to_uint8 value in
-    (high, low)
-
 let create () =
     {
       a = Uint8.zero;
@@ -68,10 +58,10 @@ let read_r8 t reg =
 
 let read_r16 t reg =
     match reg with
-    | AF -> uint16_of_uint8s t.f t.a
-    | BC -> uint16_of_uint8s t.c t.b
-    | DE -> uint16_of_uint8s t.e t.d
-    | HL -> uint16_of_uint8s t.l t.h
+    | AF -> uint16_of_uint8s ~low:t.f ~high:t.a
+    | BC -> uint16_of_uint8s ~low:t.c ~high:t.b
+    | DE -> uint16_of_uint8s ~low:t.e ~high:t.d
+    | HL -> uint16_of_uint8s ~low:t.l ~high:t.h
 
 let write_r8 t reg value =
     match reg with
@@ -87,19 +77,19 @@ let write_r8 t reg value =
 let write_r16 t reg value =
     match reg with
     | AF ->
-        let a, f = uint8s_of_uint16 value in
+        let f, a = uint8s_of_uint16 value in
         t.a <- a;
         t.f <- f
     | BC ->
-        let b, c = uint8s_of_uint16 value in
+        let c, b = uint8s_of_uint16 value in
         t.b <- b;
         t.c <- c
     | DE ->
-        let d, e = uint8s_of_uint16 value in
+        let e, d = uint8s_of_uint16 value in
         t.d <- d;
         t.e <- e
     | HL ->
-        let h, l = uint8s_of_uint16 value in
+        let l, h = uint8s_of_uint16 value in
         t.h <- h;
         t.l <- l
 

@@ -1,4 +1,4 @@
-open Stdint
+open Uint
 
 module type ByteAddressable = sig
   type t

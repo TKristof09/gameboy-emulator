@@ -1,5 +1,5 @@
 include Gameboy
-open Stdint
+open Uint
 
 let%expect_test "test write and read single 8bit register" =
     let t = Registers.create () in

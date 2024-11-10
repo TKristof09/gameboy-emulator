@@ -1,4 +1,4 @@
-open Stdint
+open Uint
 
 type t
 

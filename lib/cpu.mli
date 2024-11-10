@@ -1,9 +1,9 @@
-open Stdint
+open Uint
 
-module Make (Mem : Addressable_intf.WordAddressable) : sig
+module Make (Bus : Addressable_intf.WordAddressable) : sig
   type t
 
-  val create : mem:Mem.t -> t
+  val create : bus:Bus.t -> t
   val execute : t -> Instruction.t -> uint16 -> unit
   val step : t -> unit
   val show : t -> string
