@@ -12,8 +12,10 @@ type _ arg =
     | HL_d : uint8 arg
     | PtrR : Registers.r16 -> uint8 arg
     | PtrImm : uint16 -> uint8 arg
+    | PtrImm16 : uint16 -> uint16 arg
     | Offset : uint8 -> uint8 arg
     | C_offset : uint8 arg
+    | SP_offset: int8 -> uint16 arg
 
 type condition =
     | None
@@ -60,13 +62,13 @@ type t =
     | LD16 of uint16 arg * uint16 arg
     (* Jumps and Subroutines *)
     | CALL of condition * uint16
-    | JP
+    | JP of condition * uint16 arg
     | JR of condition * int8
     | RET of condition
     | RETI
-    | RST
+    | RST of uint16
     (* Stack Operations Instructions *)
-    (* | ADD *)
+    | ADDSP of int8
     (* | DEC *)
     (* | INC *)
     (* | LD *)

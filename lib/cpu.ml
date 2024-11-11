@@ -47,6 +47,7 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
               let addr = Registers.read_r16 cpu.registers reg in
               Bus.read_byte cpu.bus addr
           | PtrImm addr -> Bus.read_byte cpu.bus addr
+          | PtrImm16 addr -> Bus.read_word cpu.bus addr
           | Offset n ->
               let addr = Uint16.(of_int 0xFF00 + of_uint8 n) in
               Bus.read_byte cpu.bus addr
@@ -54,6 +55,8 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
               let n = Registers.read_r8 cpu.registers C in
               let addr = Uint16.(of_int 0xFF00 + of_uint8 n) in
               Bus.read_byte cpu.bus addr
+         | SP_offset e ->
+              Uint16.of_int (Uint16.to_int cpu.sp + Int8.to_int e)
       and write_arg : type a. a arg -> a -> unit =
          fun arg v ->
           match arg with
@@ -72,6 +75,7 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
               let addr = Registers.read_r16 cpu.registers reg in
               Bus.write_byte cpu.bus ~addr ~data:v
           | PtrImm addr -> Bus.write_byte cpu.bus ~addr ~data:v
+          | PtrImm16 addr -> Bus.write_word cpu.bus ~addr ~data:v
           | Offset n ->
               let addr = Uint16.(of_int 0xFF00 + of_uint8 n) in
               Bus.write_byte cpu.bus ~addr ~data:v
@@ -80,8 +84,9 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
               let addr = Uint16.(of_int 0xFF00 + of_uint8 n) in
               Bus.write_byte cpu.bus ~addr ~data:v
           | Imm8 _
-          | Imm16 _ ->
-              failwith "Can't write to immediate arg"
+          | Imm16 _
+          | SP_offset _ ->
+              failwith "Can't write to immediate arg or SP offset"
       and check_condition cond =
           match cond with
           | Z -> Registers.read_flag cpu.registers Zero

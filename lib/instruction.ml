@@ -10,8 +10,10 @@ type _ arg =
     | HL_d : uint8 arg
     | PtrR : Registers.r16 -> uint8 arg
     | PtrImm : uint16 -> uint8 arg
+    | PtrImm16 : uint16 -> uint16 arg
     | Offset : uint8 -> uint8 arg
     | C_offset : uint8 arg
+    | SP_offset : int8 -> uint16 arg
 
 type condition =
     | None
@@ -58,13 +60,13 @@ type t =
     | LD16 of uint16 arg * uint16 arg
     (* Jumps and Subroutines *)
     | CALL of condition * uint16
-    | JP
+    | JP of condition * uint16 arg
     | JR of condition * int8
     | RET of condition
     | RETI
-    | RST
+    | RST of uint16
     (* Stack Operations Instructions *)
-    (* | ADD *)
+    | ADDSP of int8
     (* | DEC *)
     (* | INC *)
     (* | LD *)
@@ -92,8 +94,10 @@ let show instr =
         | HL_d -> "[HL-]"
         | PtrR reg -> Printf.sprintf "[%s]" (Registers.show_r16 reg)
         | PtrImm n -> Printf.sprintf "[%s]" (Uint16.to_string_hex n)
+        | PtrImm16 n -> Printf.sprintf "[%s]" (Uint16.to_string_hex n)
         | Offset n -> Printf.sprintf "[0xFF00 + %s]" (Uint8.to_string_hex n)
         | C_offset -> Printf.sprintf "[0xFF00 + C]"
+        | SP_offset e -> Printf.sprintf "[SP + %s]" (Int8.to_string e)
     in
     let show_condition cond =
         match cond with
@@ -136,11 +140,12 @@ let show instr =
     | RES (n, x) -> Printf.sprintf "RES %d, %s" n (show_arg x)
     | SET (n, x) -> Printf.sprintf "SET %d, %s" n (show_arg x)
     | CALL (c, x) -> Printf.sprintf "CALL %s, %s" (show_condition c) (Uint16.to_string x)
-    | JP -> "JP"
+    | JP (c, x) -> Printf.sprintf "JP %s, %s" (show_condition c) (show_arg x)
     | JR (c, x) -> Printf.sprintf "JR %s, %s" (show_condition c) (Int8.to_string_hex x)
     | RET c -> Printf.sprintf "RET %s" (show_condition c)
     | RETI -> "RETI"
-    | RST -> "RST"
+    | RST x -> Printf.sprintf "RST %s" (Uint16.to_string_hex x)
+    | ADDSP x -> Printf.sprintf "ADDSP %s" (Int8.to_string x)
     | POP x -> Printf.sprintf "POP %s" (show_arg x)
     | PUSH x -> Printf.sprintf "PUSH %s" (show_arg x)
     | CCF -> "CCF"

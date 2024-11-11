@@ -20,8 +20,11 @@ module Make (Mem : Addressable_intf.WordAddressable) = struct
           let n = read_byte_operand () in
           { len = Uint16.of_int 2; instr = LD8 (Reg8 B, Imm8 n) }
       | 0x07 -> { len = Uint16.one; instr = RLCA }
+      | 0x08 ->
+          let n = read_word_operand () in
+          { len = Uint16.of_int 3; instr = LD16 (PtrImm16 n, SP) }
       | 0x09 -> { len = Uint16.one; instr = ADD16 (Reg16 HL, Reg16 BC) }
-      (* | 0x0A -> LD8 (Reg8 A, Reg16 BC) *)
+      | 0x0A -> { len = Uint16.one; instr = LD8 (Reg8 A, PtrR BC) }
       | 0x0B -> { len = Uint16.one; instr = DEC16 (Reg16 BC) }
       | 0x0C -> { len = Uint16.one; instr = INC8 (Reg8 C) }
       | 0x0D -> { len = Uint16.one; instr = DEC8 (Reg8 C) }
@@ -44,7 +47,9 @@ module Make (Mem : Addressable_intf.WordAddressable) = struct
           let n = read_byte_operand () in
           { len = Uint16.of_int 2; instr = LD8 (Reg8 D, Imm8 n) }
       | 0x17 -> { len = Uint16.one; instr = RLA }
-      | 0x18 -> { len = Uint16.of_int 2; instr = JR (None, read_signed_byte_operand ()) }
+      | 0x18 ->
+          let e = read_signed_byte_operand () in
+          { len = Uint16.of_int 2; instr = JR (None, e) }
       | 0x19 -> { len = Uint16.one; instr = ADD16 (Reg16 HL, Reg16 DE) }
       | 0x1A -> { len = Uint16.one; instr = LD8 (Reg8 A, PtrR DE) }
       | 0x1B -> { len = Uint16.one; instr = DEC16 (Reg16 DE) }
@@ -54,7 +59,9 @@ module Make (Mem : Addressable_intf.WordAddressable) = struct
           let n = read_byte_operand () in
           { len = Uint16.of_int 2; instr = LD8 (Reg8 E, Imm8 n) }
       | 0x1F -> { len = Uint16.one; instr = RRA }
-      | 0x20 -> { len = Uint16.of_int 2; instr = JR (NZ, read_signed_byte_operand ()) }
+      | 0x20 ->
+          let e = read_signed_byte_operand () in
+          { len = Uint16.of_int 2; instr = JR (NZ, e) }
       | 0x21 ->
           let n = read_word_operand () in
           { len = Uint16.of_int 3; instr = LD16 (Reg16 HL, Imm16 n) }
@@ -66,9 +73,11 @@ module Make (Mem : Addressable_intf.WordAddressable) = struct
           let n = read_byte_operand () in
           { len = Uint16.of_int 2; instr = LD8 (Reg8 H, Imm8 n) }
       | 0x27 -> { len = Uint16.one; instr = DAA }
-      | 0x28 -> { len = Uint16.of_int 2; instr = JR (Z, read_signed_byte_operand ()) }
+      | 0x28 ->
+          let e = read_signed_byte_operand () in
+          { len = Uint16.of_int 2; instr = JR (Z, e) }
       | 0x29 -> { len = Uint16.one; instr = ADD16 (Reg16 HL, Reg16 HL) }
-      (* | 0x2A -> LD8 (Reg8 A, Reg16 HL) *)
+      | 0x2A -> { len = Uint16.one; instr = LD8 (Reg8 A, PtrR HL) }
       | 0x2B -> { len = Uint16.one; instr = DEC16 (Reg16 HL) }
       | 0x2C -> { len = Uint16.one; instr = INC8 (Reg8 L) }
       | 0x2D -> { len = Uint16.one; instr = DEC8 (Reg8 L) }
@@ -76,22 +85,26 @@ module Make (Mem : Addressable_intf.WordAddressable) = struct
           let n = read_byte_operand () in
           { len = Uint16.of_int 2; instr = LD8 (Reg8 L, Imm8 n) }
       | 0x2F -> { len = Uint16.one; instr = CPL }
-      | 0x30 -> { len = Uint16.of_int 2; instr = JR (NC, read_signed_byte_operand ()) }
+      | 0x30 ->
+          let e = read_signed_byte_operand () in
+          { len = Uint16.of_int 2; instr = JR (NC, e) }
       | 0x31 ->
           let n = read_word_operand () in
           { len = Uint16.of_int 3; instr = LD16 (SP, Imm16 n) }
       | 0x32 -> { len = Uint16.one; instr = LD8 (HL_d, Reg8 A) }
-      (* | 0x33 -> INC16 (Reg16 SP) *)
-      (* | 0x34 -> INC8 (Reg16 HL) *)
-      (* | 0x35 -> DEC8 (Reg16 HL) *)
+      | 0x33 -> { len = Uint16.one; instr = INC16 SP }
+      | 0x34 -> { len = Uint16.one; instr = INC8 (PtrR HL) }
+      | 0x35 -> { len = Uint16.one; instr = DEC8 (PtrR HL) }
       | 0x36 ->
           let n = read_byte_operand () in
           { len = Uint16.of_int 2; instr = LD8 (PtrR HL, Imm8 n) }
       | 0x37 -> { len = Uint16.one; instr = SCF }
-      | 0x38 -> { len = Uint16.of_int 2; instr = JR (C, read_signed_byte_operand ()) }
-      (* | 0x39 -> ADD16 (Reg16 HL, Reg16 SP) *)
-      (* | 0x3A -> LD8 (Reg8 A, Reg16 HL) *)
-      (* | 0x3B -> DEC16 (Reg16 SP) *)
+      | 0x38 ->
+          let e = read_signed_byte_operand () in
+          { len = Uint16.of_int 2; instr = JR (C, e) }
+      | 0x39 -> { len = Uint16.one; instr = ADD16 (Reg16 HL, SP) }
+      | 0x3A -> { len = Uint16.one; instr = LD8 (Reg8 A, HL_d) }
+      | 0x3B -> { len = Uint16.one; instr = DEC16 SP }
       | 0x3C -> { len = Uint16.one; instr = INC8 (Reg8 A) }
       | 0x3D -> { len = Uint16.one; instr = DEC8 (Reg8 A) }
       | 0x3E ->
@@ -104,7 +117,7 @@ module Make (Mem : Addressable_intf.WordAddressable) = struct
       | 0x43 -> { len = Uint16.one; instr = LD8 (Reg8 B, Reg8 E) }
       | 0x44 -> { len = Uint16.one; instr = LD8 (Reg8 B, Reg8 H) }
       | 0x45 -> { len = Uint16.one; instr = LD8 (Reg8 B, Reg8 L) }
-      (* | 0x46 -> LD8 (Reg8 B, Reg16 HL) *)
+      | 0x46 -> { len = Uint16.one; instr = LD8 (Reg8 B, PtrR HL) }
       | 0x47 -> { len = Uint16.one; instr = LD8 (Reg8 B, Reg8 A) }
       | 0x48 -> { len = Uint16.one; instr = LD8 (Reg8 C, Reg8 B) }
       | 0x49 -> { len = Uint16.one; instr = LD8 (Reg8 C, Reg8 C) }
@@ -112,7 +125,7 @@ module Make (Mem : Addressable_intf.WordAddressable) = struct
       | 0x4B -> { len = Uint16.one; instr = LD8 (Reg8 C, Reg8 E) }
       | 0x4C -> { len = Uint16.one; instr = LD8 (Reg8 C, Reg8 H) }
       | 0x4D -> { len = Uint16.one; instr = LD8 (Reg8 C, Reg8 L) }
-      (* | 0x4E -> LD8 (Reg8 C, Reg16 HL) *)
+      | 0x4E -> { len = Uint16.one; instr = LD8 (Reg8 C, PtrR HL) }
       | 0x4F -> { len = Uint16.one; instr = LD8 (Reg8 C, Reg8 A) }
       | 0x50 -> { len = Uint16.one; instr = LD8 (Reg8 D, Reg8 B) }
       | 0x51 -> { len = Uint16.one; instr = LD8 (Reg8 D, Reg8 C) }
@@ -120,7 +133,7 @@ module Make (Mem : Addressable_intf.WordAddressable) = struct
       | 0x53 -> { len = Uint16.one; instr = LD8 (Reg8 D, Reg8 E) }
       | 0x54 -> { len = Uint16.one; instr = LD8 (Reg8 D, Reg8 H) }
       | 0x55 -> { len = Uint16.one; instr = LD8 (Reg8 D, Reg8 L) }
-      (* | 0x56 -> LD8 (Reg8 D, Reg16 HL) *)
+      | 0x56 -> { len = Uint16.one; instr = LD8 (Reg8 D, PtrR HL) }
       | 0x57 -> { len = Uint16.one; instr = LD8 (Reg8 D, Reg8 A) }
       | 0x58 -> { len = Uint16.one; instr = LD8 (Reg8 E, Reg8 B) }
       | 0x59 -> { len = Uint16.one; instr = LD8 (Reg8 E, Reg8 C) }
@@ -128,7 +141,7 @@ module Make (Mem : Addressable_intf.WordAddressable) = struct
       | 0x5B -> { len = Uint16.one; instr = LD8 (Reg8 E, Reg8 E) }
       | 0x5C -> { len = Uint16.one; instr = LD8 (Reg8 E, Reg8 H) }
       | 0x5D -> { len = Uint16.one; instr = LD8 (Reg8 E, Reg8 L) }
-      (* | 0x5E -> LD8 (Reg8 E, Reg16 HL) *)
+      | 0x5E -> { len = Uint16.one; instr = LD8 (Reg8 E, PtrR HL) }
       | 0x5F -> { len = Uint16.one; instr = LD8 (Reg8 E, Reg8 A) }
       | 0x60 -> { len = Uint16.one; instr = LD8 (Reg8 H, Reg8 B) }
       | 0x61 -> { len = Uint16.one; instr = LD8 (Reg8 H, Reg8 C) }
@@ -136,7 +149,7 @@ module Make (Mem : Addressable_intf.WordAddressable) = struct
       | 0x63 -> { len = Uint16.one; instr = LD8 (Reg8 H, Reg8 E) }
       | 0x64 -> { len = Uint16.one; instr = LD8 (Reg8 H, Reg8 H) }
       | 0x65 -> { len = Uint16.one; instr = LD8 (Reg8 H, Reg8 L) }
-      (* | 0x66 -> LD8 (Reg8 H, Reg16 HL) *)
+      | 0x66 -> { len = Uint16.one; instr = LD8 (Reg8 H, PtrR HL) }
       | 0x67 -> { len = Uint16.one; instr = LD8 (Reg8 H, Reg8 A) }
       | 0x68 -> { len = Uint16.one; instr = LD8 (Reg8 L, Reg8 B) }
       | 0x69 -> { len = Uint16.one; instr = LD8 (Reg8 L, Reg8 C) }
@@ -144,14 +157,14 @@ module Make (Mem : Addressable_intf.WordAddressable) = struct
       | 0x6B -> { len = Uint16.one; instr = LD8 (Reg8 L, Reg8 E) }
       | 0x6C -> { len = Uint16.one; instr = LD8 (Reg8 L, Reg8 H) }
       | 0x6D -> { len = Uint16.one; instr = LD8 (Reg8 L, Reg8 L) }
-      (* | 0x6E -> LD8 (Reg8 L, Reg16 HL) *)
+      | 0x6E -> { len = Uint16.one; instr = LD8 (Reg8 L, PtrR HL) }
       | 0x6F -> { len = Uint16.one; instr = LD8 (Reg8 L, Reg8 A) }
-      (* | 0x70 -> LD8 (Reg16 HL, Reg8 B) *)
-      (* | 0x71 -> LD8 (Reg16 HL, Reg8 C) *)
-      (* | 0x72 -> LD8 (Reg16 HL, Reg8 D) *)
-      (* | 0x73 -> LD8 (Reg16 HL, Reg8 E) *)
-      (* | 0x74 -> LD8 (Reg16 HL, Reg8 H) *)
-      (* | 0x75 -> LD8 (Reg16 HL, Reg8 L) *)
+      | 0x70 -> { len = Uint16.one; instr = LD8 (PtrR HL, Reg8 B) }
+      | 0x71 -> { len = Uint16.one; instr = LD8 (PtrR HL, Reg8 C) }
+      | 0x72 -> { len = Uint16.one; instr = LD8 (PtrR HL, Reg8 D) }
+      | 0x73 -> { len = Uint16.one; instr = LD8 (PtrR HL, Reg8 E) }
+      | 0x74 -> { len = Uint16.one; instr = LD8 (PtrR HL, Reg8 H) }
+      | 0x75 -> { len = Uint16.one; instr = LD8 (PtrR HL, Reg8 L) }
       | 0x76 -> { len = Uint16.one; instr = HALT }
       | 0x77 -> { len = Uint16.one; instr = LD8 (PtrR HL, Reg8 A) }
       | 0x78 -> { len = Uint16.one; instr = LD8 (Reg8 A, Reg8 B) }
@@ -168,7 +181,7 @@ module Make (Mem : Addressable_intf.WordAddressable) = struct
       | 0x83 -> { len = Uint16.one; instr = ADD8 (Reg8 A, Reg8 E) }
       | 0x84 -> { len = Uint16.one; instr = ADD8 (Reg8 A, Reg8 H) }
       | 0x85 -> { len = Uint16.one; instr = ADD8 (Reg8 A, Reg8 L) }
-      (* | 0x86 -> ADD8 (Reg8 A, Reg16 HL) *)
+      | 0x86 -> { len = Uint16.one; instr = ADD8 (Reg8 A, PtrR HL) }
       | 0x87 -> { len = Uint16.one; instr = ADD8 (Reg8 A, Reg8 A) }
       | 0x88 -> { len = Uint16.one; instr = ADC (Reg8 A, Reg8 B) }
       | 0x89 -> { len = Uint16.one; instr = ADC (Reg8 A, Reg8 C) }
@@ -176,7 +189,7 @@ module Make (Mem : Addressable_intf.WordAddressable) = struct
       | 0x8B -> { len = Uint16.one; instr = ADC (Reg8 A, Reg8 E) }
       | 0x8C -> { len = Uint16.one; instr = ADC (Reg8 A, Reg8 H) }
       | 0x8D -> { len = Uint16.one; instr = ADC (Reg8 A, Reg8 L) }
-      (* | 0x8E -> ADC (Reg8 A, Reg16 HL) *)
+      | 0x8E -> { len = Uint16.one; instr = ADC (Reg8 A, PtrR HL) }
       | 0x8F -> { len = Uint16.one; instr = ADC (Reg8 A, Reg8 A) }
       | 0x90 -> { len = Uint16.one; instr = SUB (Reg8 A, Reg8 B) }
       | 0x91 -> { len = Uint16.one; instr = SUB (Reg8 A, Reg8 C) }
@@ -184,7 +197,7 @@ module Make (Mem : Addressable_intf.WordAddressable) = struct
       | 0x93 -> { len = Uint16.one; instr = SUB (Reg8 A, Reg8 E) }
       | 0x94 -> { len = Uint16.one; instr = SUB (Reg8 A, Reg8 H) }
       | 0x95 -> { len = Uint16.one; instr = SUB (Reg8 A, Reg8 L) }
-      (* | 0x96 -> SUB (Reg8 A, Reg16 HL) *)
+      | 0x96 -> { len = Uint16.one; instr = SUB (Reg8 A, PtrR HL) }
       | 0x97 -> { len = Uint16.one; instr = SUB (Reg8 A, Reg8 A) }
       | 0x98 -> { len = Uint16.one; instr = SBC (Reg8 A, Reg8 B) }
       | 0x99 -> { len = Uint16.one; instr = SBC (Reg8 A, Reg8 C) }
@@ -192,7 +205,7 @@ module Make (Mem : Addressable_intf.WordAddressable) = struct
       | 0x9B -> { len = Uint16.one; instr = SBC (Reg8 A, Reg8 E) }
       | 0x9C -> { len = Uint16.one; instr = SBC (Reg8 A, Reg8 H) }
       | 0x9D -> { len = Uint16.one; instr = SBC (Reg8 A, Reg8 L) }
-      (* | 0x9E -> SBC (Reg8 A, Reg16 HL) *)
+      | 0x9E -> { len = Uint16.one; instr = SBC (Reg8 A, PtrR HL) }
       | 0x9F -> { len = Uint16.one; instr = SBC (Reg8 A, Reg8 A) }
       | 0xA0 -> { len = Uint16.one; instr = AND (Reg8 A, Reg8 B) }
       | 0xA1 -> { len = Uint16.one; instr = AND (Reg8 A, Reg8 C) }
@@ -200,7 +213,7 @@ module Make (Mem : Addressable_intf.WordAddressable) = struct
       | 0xA3 -> { len = Uint16.one; instr = AND (Reg8 A, Reg8 E) }
       | 0xA4 -> { len = Uint16.one; instr = AND (Reg8 A, Reg8 H) }
       | 0xA5 -> { len = Uint16.one; instr = AND (Reg8 A, Reg8 L) }
-      (* | 0xA6 -> AND (Reg8 A, Reg16 HL) *)
+      | 0xA6 -> { len = Uint16.one; instr = AND (Reg8 A, PtrR HL) }
       | 0xA7 -> { len = Uint16.one; instr = AND (Reg8 A, Reg8 A) }
       | 0xA8 -> { len = Uint16.one; instr = XOR (Reg8 A, Reg8 B) }
       | 0xA9 -> { len = Uint16.one; instr = XOR (Reg8 A, Reg8 C) }
@@ -208,7 +221,7 @@ module Make (Mem : Addressable_intf.WordAddressable) = struct
       | 0xAB -> { len = Uint16.one; instr = XOR (Reg8 A, Reg8 E) }
       | 0xAC -> { len = Uint16.one; instr = XOR (Reg8 A, Reg8 H) }
       | 0xAD -> { len = Uint16.one; instr = XOR (Reg8 A, Reg8 L) }
-      (* | 0xAE -> XOR (Reg8 A, Reg16 HL) *)
+      | 0xAE -> { len = Uint16.one; instr = XOR (Reg8 A, PtrR HL) }
       | 0xAF -> { len = Uint16.one; instr = XOR (Reg8 A, Reg8 A) }
       | 0xB0 -> { len = Uint16.one; instr = OR (Reg8 A, Reg8 B) }
       | 0xB1 -> { len = Uint16.one; instr = OR (Reg8 A, Reg8 C) }
@@ -216,7 +229,7 @@ module Make (Mem : Addressable_intf.WordAddressable) = struct
       | 0xB3 -> { len = Uint16.one; instr = OR (Reg8 A, Reg8 E) }
       | 0xB4 -> { len = Uint16.one; instr = OR (Reg8 A, Reg8 H) }
       | 0xB5 -> { len = Uint16.one; instr = OR (Reg8 A, Reg8 L) }
-      (* | 0xB6 -> OR (Reg8 A, Reg16 HL) *)
+      | 0xB6 -> { len = Uint16.one; instr = OR (Reg8 A, PtrR HL) }
       | 0xB7 -> { len = Uint16.one; instr = OR (Reg8 A, Reg8 A) }
       | 0xB8 -> { len = Uint16.one; instr = CP (Reg8 A, Reg8 B) }
       | 0xB9 -> { len = Uint16.one; instr = CP (Reg8 A, Reg8 C) }
@@ -224,37 +237,68 @@ module Make (Mem : Addressable_intf.WordAddressable) = struct
       | 0xBB -> { len = Uint16.one; instr = CP (Reg8 A, Reg8 E) }
       | 0xBC -> { len = Uint16.one; instr = CP (Reg8 A, Reg8 H) }
       | 0xBD -> { len = Uint16.one; instr = CP (Reg8 A, Reg8 L) }
-      (* | 0xBE -> CP (Reg8 A, Reg16 HL) *)
+      | 0xBE -> { len = Uint16.one; instr = CP (Reg8 A, PtrR HL) }
       | 0xBF -> { len = Uint16.one; instr = CP (Reg8 A, Reg8 A) }
       | 0xC0 -> { len = Uint16.one; instr = RET NZ }
       | 0xC1 -> { len = Uint16.one; instr = POP (Reg16 BC) }
+      | 0xC2 ->
+          let n = read_word_operand () in
+          { len = Uint16.of_int 3; instr = JP (NZ, Imm16 n) }
+      | 0xC3 ->
+          let n = read_word_operand () in
+          { len = Uint16.of_int 3; instr = JP (None, Imm16 n) }
+      | 0xC4 ->
+          let n = read_word_operand () in
+          { len = Uint16.of_int 3; instr = CALL (NZ, n) }
       | 0xC5 -> { len = Uint16.one; instr = PUSH (Reg16 BC) }
       | 0xC6 ->
           let n = read_byte_operand () in
           { len = Uint16.of_int 2; instr = ADD8 (Reg8 A, Imm8 n) }
+      | 0xC7 -> { len = Uint16.one; instr = RST (Uint16.of_int 0x00) }
       | 0xC8 -> { len = Uint16.one; instr = RET Z }
       | 0xC9 -> { len = Uint16.one; instr = RET None }
+      | 0xCA ->
+          let n = read_word_operand () in
+          { len = Uint16.of_int 3; instr = JP (Z, Imm16 n) }
       (* 0xCB prefix is handled later *)
+      | 0xCC ->
+          let n = read_word_operand () in
+          { len = Uint16.of_int 3; instr = CALL (Z, n) }
       | 0xCD ->
           let n = read_word_operand () in
           { len = Uint16.of_int 3; instr = CALL (None, n) }
       | 0xCE ->
           let n = read_byte_operand () in
           { len = Uint16.of_int 2; instr = ADC (Reg8 A, Imm8 n) }
+      | 0xCF -> { len = Uint16.one; instr = RST (Uint16.of_int 0x08) }
       | 0xD0 -> { len = Uint16.one; instr = RET NC }
       | 0xD1 -> { len = Uint16.one; instr = POP (Reg16 DE) }
+      | 0xD2 ->
+          let n = read_word_operand () in
+          { len = Uint16.of_int 3; instr = JP (NC, Imm16 n) }
       | 0xD3 -> failwith "Illegal opcode 0xD3"
+      | 0xD4 ->
+          let n = read_word_operand () in
+          { len = Uint16.of_int 3; instr = CALL (NC, n) }
       | 0xD5 -> { len = Uint16.one; instr = PUSH (Reg16 DE) }
       | 0xD6 ->
           let n = read_byte_operand () in
           { len = Uint16.of_int 2; instr = SUB (Reg8 A, Imm8 n) }
+      | 0xD7 -> { len = Uint16.one; instr = RST (Uint16.of_int 0x10) }
       | 0xD8 -> { len = Uint16.one; instr = RET C }
       | 0xD9 -> { len = Uint16.one; instr = RETI }
+      | 0xDA ->
+          let n = read_word_operand () in
+          { len = Uint16.of_int 3; instr = JP (C, Imm16 n) }
       | 0xDB -> failwith "Illegal opcode 0xDB"
+      | 0xDC ->
+          let n = read_word_operand () in
+          { len = Uint16.of_int 3; instr = CALL (C, n) }
       | 0xDD -> failwith "Illegal opcode 0xDD"
       | 0xDE ->
           let n = read_byte_operand () in
           { len = Uint16.of_int 2; instr = SBC (Reg8 A, Imm8 n) }
+      | 0xDF -> { len = Uint16.one; instr = RST (Uint16.of_int 0x18) }
       | 0xE0 ->
           let n = read_byte_operand () in
           { len = Uint16.of_int 2; instr = LD8 (Offset n, Reg8 A) }
@@ -266,8 +310,11 @@ module Make (Mem : Addressable_intf.WordAddressable) = struct
       | 0xE6 ->
           let n = read_byte_operand () in
           { len = Uint16.of_int 2; instr = AND (Reg8 A, Imm8 n) }
-      (* | 0xE8 -> ADD8 (Reg16 SP, Reg16 e8) *)
-      (* | 0xE9 -> JP (Reg16 HL) *)
+      | 0xE7 -> { len = Uint16.one; instr = RST (Uint16.of_int 0x20) }
+      | 0xE8 ->
+          let e = read_signed_byte_operand () in
+          { len = Uint16.of_int 2; instr = ADDSP e }
+      | 0xE9 -> { len = Uint16.one; instr = JP (None, Reg16 HL) }
       | 0xEA ->
           let n = read_word_operand () in
           { len = Uint16.of_int 3; instr = LD8 (PtrImm n, Reg8 A) }
@@ -277,19 +324,26 @@ module Make (Mem : Addressable_intf.WordAddressable) = struct
       | 0xEE ->
           let n = read_byte_operand () in
           { len = Uint16.of_int 2; instr = XOR (Reg8 A, Imm8 n) }
+      | 0xEF -> { len = Uint16.one; instr = RST (Uint16.of_int 0x28) }
       | 0xF0 ->
           let n = read_byte_operand () in
           { len = Uint16.of_int 2; instr = LD8 (Reg8 A, Offset n) }
       | 0xF1 -> { len = Uint16.one; instr = POP (Reg16 AF) }
-      (* | 0xF2 -> { len = Uint16.one; instr = LD8 (Reg8 A, Reg8 C) } *)
+      | 0xF2 -> { len = Uint16.one; instr = LD8 (Reg8 A, C_offset) }
       | 0xF3 -> { len = Uint16.one; instr = DI }
       | 0xF4 -> failwith "Illegal opcode 0xF4"
       | 0xF5 -> { len = Uint16.one; instr = PUSH (Reg16 AF) }
       | 0xF6 ->
           let n = read_byte_operand () in
           { len = Uint16.of_int 2; instr = OR (Reg8 A, Imm8 n) }
-      (* | 0xF8 -> LD16 (Reg16 HL, Reg16 SP, Reg16 e8) *)
-      (* | 0xF9 -> LD16 (Reg16 SP, Reg16 HL) *)
+      | 0xF7 -> { len = Uint16.one; instr = RST (Uint16.of_int 0x30) }
+      | 0xF8 ->
+          let e = read_signed_byte_operand () in
+          { len = Uint16.of_int 2; instr = LD16 (Reg16 HL, SP_offset e) }
+      | 0xF9 -> { len = Uint16.one; instr = LD16 (SP, Reg16 HL) }
+      | 0xFA ->
+          let n = read_word_operand () in
+          { len = Uint16.of_int 3; instr = LD8 (Reg8 A, PtrImm n) }
       | 0xFB -> { len = Uint16.one; instr = EI }
       | 0xFC -> failwith "Illegal opcode 0xFC"
       | 0xFD -> failwith "Illegal opcode 0xFD"
@@ -557,5 +611,6 @@ module Make (Mem : Addressable_intf.WordAddressable) = struct
           | 0xFE -> { len = Uint16.of_int 2; instr = SET (7, PtrR HL) }
           | 0xFF -> { len = Uint16.of_int 2; instr = SET (7, Reg8 A) }
           | _ -> failwith @@ Printf.sprintf "Unhandled prefixed opcode %#x" op)
+      | 0xFF -> { len = Uint16.one; instr = RST (Uint16.of_int 0x38) }
       | _ -> failwith @@ Printf.sprintf "Unhandled opcode %#x" op
 end
