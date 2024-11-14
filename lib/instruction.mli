@@ -15,7 +15,7 @@ type _ arg =
     | PtrImm16 : uint16 -> uint16 arg
     | Offset : uint8 -> uint8 arg
     | C_offset : uint8 arg
-    | SP_offset: int8 -> uint16 arg
+    | SP_offset : int8 -> uint16 arg
 
 type condition =
     | None

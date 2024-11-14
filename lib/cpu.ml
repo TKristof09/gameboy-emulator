@@ -55,8 +55,7 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
               let n = Registers.read_r8 cpu.registers C in
               let addr = Uint16.(of_int 0xFF00 + of_uint8 n) in
               Bus.read_byte cpu.bus addr
-         | SP_offset e ->
-              Uint16.of_int (Uint16.to_int cpu.sp + Int8.to_int e)
+          | SP_offset e -> Uint16.of_int (Uint16.to_int cpu.sp + Int8.to_int e)
       and write_arg : type a. a arg -> a -> unit =
          fun arg v ->
           match arg with
