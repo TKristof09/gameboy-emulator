@@ -1,6 +1,7 @@
 open Uint
 
 type t = {
+    ppu : Ppu.t;
     wram : Ram.t;
     hram : Ram.t;
     vram : Ram.t;
@@ -8,7 +9,8 @@ type t = {
     cartridge : Cartridge.t;
   }
 
-let create ~wram ~hram ~vram ~boot_rom ~cartridge = { wram; hram; vram; boot_rom; cartridge }
+let create ~ppu ~wram ~hram ~vram ~boot_rom ~cartridge =
+    { ppu; wram; hram; vram; boot_rom; cartridge }
 
 let read_byte t addr =
     let read_boot_rom = true in
@@ -19,6 +21,7 @@ let read_byte t addr =
     | addr_int when 0xC000 <= addr_int && addr_int <= 0xDFFF -> Ram.read_byte t.wram addr
     | addr_int when 0xFF80 <= addr_int && addr_int <= 0xFFFE -> Ram.read_byte t.hram addr
     | addr_int when 0x8000 <= addr_int && addr_int <= 0x9FFF -> Ram.read_byte t.vram addr
+    | _ when Ppu.accepts_address addr -> Ppu.read_byte t.ppu addr
     | _ ->
         failwith @@ Printf.sprintf "Unhandled memory location read %s" (Uint16.to_string_hex addr)
 
@@ -29,6 +32,7 @@ let write_byte t ~addr ~data =
     | addr_int when 0xC000 <= addr_int && addr_int <= 0xDFFF -> Ram.write_byte t.wram ~addr ~data
     | addr_int when 0xFF80 <= addr_int && addr_int <= 0xFFFE -> Ram.write_byte t.hram ~addr ~data
     | addr_int when 0x8000 <= addr_int && addr_int <= 0x9FFF -> Ram.write_byte t.vram ~addr ~data
+    | _ when Ppu.accepts_address addr -> Ppu.write_byte t.ppu ~addr ~data
     | _ -> Printf.printf "Unhandled memory location write %s\n" (Uint16.to_string_hex addr)
 
 let read_word t addr =

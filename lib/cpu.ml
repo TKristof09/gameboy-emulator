@@ -22,7 +22,7 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
       | Nexti
       | Jump of uint16
 
-  let execute cpu instr instr_len =
+  let execute cpu instr instr_len mcycles_branch mcycles_nobranch =
       cpu.pc <- Uint16.(cpu.pc + instr_len);
 
       let read_arg : type a. a arg -> a =
@@ -246,11 +246,13 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
       in
 
       match advance_pc with
-      | Nexti -> ()
-      | Jump i -> cpu.pc <- i
+      | Nexti -> mcycles_nobranch
+      | Jump i ->
+          cpu.pc <- i;
+          mcycles_branch
 
   let step cpu =
       let info = Instruction_fetcher.fetch cpu.bus ~pc:cpu.pc in
       (* Printf.printf "PC: %s\n" (Uint16.to_string_hex cpu.pc); *)
-      execute cpu info.instr info.len
+      execute cpu info.instr info.len info.mcycles_branch info.mcycles_nobranch
 end

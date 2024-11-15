@@ -1,6 +1,12 @@
 type t
 
 val create :
-  wram:Ram.t -> hram:Ram.t -> vram:Ram.t -> boot_rom:Cartridge.t -> cartridge:Cartridge.t -> t
+  ppu:Ppu.t ->
+  wram:Ram.t ->
+  hram:Ram.t ->
+  vram:Ram.t ->
+  boot_rom:Cartridge.t ->
+  cartridge:Cartridge.t ->
+  t
 
 include Addressable_intf.WordAddressable with type t := t
