@@ -253,6 +253,7 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
 
   let step cpu =
       let info = Instruction_fetcher.fetch cpu.bus ~pc:cpu.pc in
-      (* Printf.printf "PC: %s\n" (Uint16.to_string_hex cpu.pc); *)
       execute cpu info.instr info.len info.mcycles_branch info.mcycles_nobranch
+
+  let get_pc cpu = Uint16.to_int cpu.pc
 end

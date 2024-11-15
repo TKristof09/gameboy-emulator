@@ -19,8 +19,8 @@ type stat = {
     mutable mode_1_interupt_enable : bool;
     mutable mode_2_interupt_enable : bool;
     mutable ly_eq_lyc_interupt_enable : bool;
-    mutable ly : uint8;
-    mutable lyc : uint8;
+    mutable ly : int;
+    mutable lyc : int;
     mutable scx : uint8;
     mutable scy : uint8;
     mutable winx : uint8;
@@ -45,18 +45,18 @@ let create () =
           bg_win_tile_data = `Mode_8000;
           win_enable = true;
           win_tile_map = `Map_0;
-          lcd_ppu_enable = true;
+          lcd_ppu_enable = false;
         };
       stat =
         {
-          ppu_mode = `Mode_0;
+          ppu_mode = `Mode_2;
           ly_eq_lyc_flag = false;
           mode_0_interupt_enable = false;
           mode_1_interupt_enable = false;
           mode_2_interupt_enable = false;
           ly_eq_lyc_interupt_enable = false;
-          ly = Uint8.zero;
-          lyc = Uint8.zero;
+          ly = 0;
+          lyc = 0;
           scx = Uint8.zero;
           scy = Uint8.zero;
           winx = Uint8.zero;
@@ -66,11 +66,20 @@ let create () =
 
 let set_mode t mode = t.stat.ppu_mode <- mode
 let get_mode t = t.stat.ppu_mode
-let incr_ly t = t.stat.ly <- Uint8.add t.stat.ly Uint8.one
-let reset_ly t = t.stat.ly <- Uint8.zero
+
+let incr_ly t =
+    t.stat.ly <- t.stat.ly + 1;
+    t.stat.ly_eq_lyc_flag <- t.stat.ly = t.stat.lyc
+
+let reset_ly t =
+    t.stat.ly <- 0;
+    t.stat.ly_eq_lyc_flag <- t.stat.ly = t.stat.lyc
+
+let get_ly t = t.stat.ly
 let set_ly_eq_lyc t b = t.stat.ly_eq_lyc_flag <- b
 let get_scroll t = (t.stat.scx, t.stat.scy)
 let get_win t = (t.stat.winx, t.stat.winy)
+let ppu_is_enabled t = t.control.lcd_ppu_enable
 
 let read_control control =
     Bool.to_int control.bg_win_enable
@@ -136,8 +145,8 @@ let read_byte t addr =
     | addr_int when addr_int = 0xFF41 -> read_stat t.stat
     | addr_int when addr_int = 0xFF42 -> t.stat.scy
     | addr_int when addr_int = 0xFF43 -> t.stat.scx
-    | addr_int when addr_int = 0xFF44 -> t.stat.ly
-    | addr_int when addr_int = 0xFF45 -> t.stat.lyc
+    | addr_int when addr_int = 0xFF44 -> Uint8.of_int t.stat.ly
+    | addr_int when addr_int = 0xFF45 -> Uint8.of_int t.stat.lyc
     (* 0xFF46 is for DMA, 0xFF47-0xFF49 are palettes *)
     | addr_int when addr_int = 0xFF4A -> t.stat.winy
     | addr_int when addr_int = 0xFF4B -> t.stat.winx
@@ -149,8 +158,8 @@ let write_byte t ~addr ~data =
     | addr_int when addr_int = 0xFF41 -> write_stat t.stat data
     | addr_int when addr_int = 0xFF42 -> t.stat.scy <- data
     | addr_int when addr_int = 0xFF43 -> t.stat.scx <- data
-    | addr_int when addr_int = 0xFF44 -> t.stat.ly <- data
-    | addr_int when addr_int = 0xFF45 -> t.stat.lyc <- data
+    | addr_int when addr_int = 0xFF44 -> failwith "LY is read only"
+    | addr_int when addr_int = 0xFF45 -> t.stat.lyc <- Uint8.to_int data
     (* 0xFF46 is for DMA, 0xFF47-0xFF49 are palettes *)
     | addr_int when addr_int = 0xFF4A -> t.stat.winy <- data
     | addr_int when addr_int = 0xFF4B -> t.stat.winx <- data

@@ -5,22 +5,20 @@
 (generate_opam_files true)
 
 (source
- (github username/reponame))
+ (github TKristof09/gameboy-emulator))
 
-(authors "Author Name")
+(authors "Kristof Toth")
 
-(maintainers "Maintainer Name")
+(maintainers "Kristof Toth")
 
-(license LICENSE)
-
-(documentation https://url/to/documentation)
+(license MIT)
 
 (package
  (name gameboy)
- (synopsis "A short synopsis")
- (description "A longer description")
+ (synopsis "A Gameboy emulator")
+ (description "A Gameboy emulator")
  (depends ocaml dune)
  (tags
-  (topics "to describe" your project)))
+  (topics "gameboy" "emulator")))
 
 ; See the complete stanza docs at https://dune.readthedocs.io/en/stable/reference/dune-project/index.html
