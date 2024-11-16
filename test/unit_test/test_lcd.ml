@@ -8,10 +8,11 @@ let%expect_test "create" =
         {|
       { Lcd.control =
         { Lcd.bg_win_enable = true; obj_enable = true; obj_size = `OBJ_size_8x8;
-          bg_tile_map = `Map_0; bg_win_tile_data = `Mode_8000; win_enable = true;
-          win_tile_map = `Map_0; lcd_ppu_enable = false };
+          bg_tile_map = Tile_map.Map_0; bg_win_tile_data = Tile_data.Mode_8000;
+          win_enable = true; win_tile_map = Tile_map.Map_0; lcd_ppu_enable = false
+          };
         stat =
-        { Lcd.ppu_mode = `Mode_2; ly_eq_lyc_flag = false;
+        { Lcd.ppu_mode = `OAM_search; ly_eq_lyc_flag = false;
           mode_0_interupt_enable = false; mode_1_interupt_enable = false;
           mode_2_interupt_enable = false; ly_eq_lyc_interupt_enable = false;
           ly = 0; lyc = 0; scx = 0; scy = 0; winx = 0; winy = 0 }
@@ -27,10 +28,11 @@ let%expect_test "write control" =
         {|
       { Lcd.control =
         { Lcd.bg_win_enable = true; obj_enable = false; obj_size = `OBJ_size_8x16;
-          bg_tile_map = `Map_1; bg_win_tile_data = `Mode_8000; win_enable = false;
-          win_tile_map = `Map_0; lcd_ppu_enable = true };
+          bg_tile_map = Tile_map.Map_1; bg_win_tile_data = Tile_data.Mode_8000;
+          win_enable = false; win_tile_map = Tile_map.Map_0; lcd_ppu_enable = true
+          };
         stat =
-        { Lcd.ppu_mode = `Mode_2; ly_eq_lyc_flag = false;
+        { Lcd.ppu_mode = `OAM_search; ly_eq_lyc_flag = false;
           mode_0_interupt_enable = false; mode_1_interupt_enable = false;
           mode_2_interupt_enable = false; ly_eq_lyc_interupt_enable = false;
           ly = 0; lyc = 0; scx = 0; scy = 0; winx = 0; winy = 0 }
@@ -47,10 +49,11 @@ let%expect_test "write stat" =
         {|
       { Lcd.control =
         { Lcd.bg_win_enable = true; obj_enable = true; obj_size = `OBJ_size_8x8;
-          bg_tile_map = `Map_0; bg_win_tile_data = `Mode_8000; win_enable = true;
-          win_tile_map = `Map_0; lcd_ppu_enable = false };
+          bg_tile_map = Tile_map.Map_0; bg_win_tile_data = Tile_data.Mode_8000;
+          win_enable = true; win_tile_map = Tile_map.Map_0; lcd_ppu_enable = false
+          };
         stat =
-        { Lcd.ppu_mode = `Mode_1; ly_eq_lyc_flag = true;
+        { Lcd.ppu_mode = `VBlank; ly_eq_lyc_flag = true;
           mode_0_interupt_enable = true; mode_1_interupt_enable = true;
           mode_2_interupt_enable = false; ly_eq_lyc_interupt_enable = false;
           ly = 0; lyc = 0; scx = 0; scy = 0; winx = 0; winy = 0 }
@@ -69,10 +72,11 @@ let%expect_test "incr ly and write lcy" =
         {|
       { Lcd.control =
         { Lcd.bg_win_enable = true; obj_enable = true; obj_size = `OBJ_size_8x8;
-          bg_tile_map = `Map_0; bg_win_tile_data = `Mode_8000; win_enable = true;
-          win_tile_map = `Map_0; lcd_ppu_enable = false };
+          bg_tile_map = Tile_map.Map_0; bg_win_tile_data = Tile_data.Mode_8000;
+          win_enable = true; win_tile_map = Tile_map.Map_0; lcd_ppu_enable = false
+          };
         stat =
-        { Lcd.ppu_mode = `Mode_2; ly_eq_lyc_flag = false;
+        { Lcd.ppu_mode = `OAM_search; ly_eq_lyc_flag = false;
           mode_0_interupt_enable = false; mode_1_interupt_enable = false;
           mode_2_interupt_enable = false; ly_eq_lyc_interupt_enable = false;
           ly = 1; lyc = 67; scx = 0; scy = 0; winx = 0; winy = 0 }
@@ -92,10 +96,11 @@ let%expect_test "write scx and scy" =
         {|
       { Lcd.control =
         { Lcd.bg_win_enable = true; obj_enable = true; obj_size = `OBJ_size_8x8;
-          bg_tile_map = `Map_0; bg_win_tile_data = `Mode_8000; win_enable = true;
-          win_tile_map = `Map_0; lcd_ppu_enable = false };
+          bg_tile_map = Tile_map.Map_0; bg_win_tile_data = Tile_data.Mode_8000;
+          win_enable = true; win_tile_map = Tile_map.Map_0; lcd_ppu_enable = false
+          };
         stat =
-        { Lcd.ppu_mode = `Mode_2; ly_eq_lyc_flag = false;
+        { Lcd.ppu_mode = `OAM_search; ly_eq_lyc_flag = false;
           mode_0_interupt_enable = false; mode_1_interupt_enable = false;
           mode_2_interupt_enable = false; ly_eq_lyc_interupt_enable = false;
           ly = 0; lyc = 0; scx = 66; scy = 67; winx = 0; winy = 0 }
@@ -115,10 +120,11 @@ let%expect_test "write winx and winy" =
         {|
       { Lcd.control =
         { Lcd.bg_win_enable = true; obj_enable = true; obj_size = `OBJ_size_8x8;
-          bg_tile_map = `Map_0; bg_win_tile_data = `Mode_8000; win_enable = true;
-          win_tile_map = `Map_0; lcd_ppu_enable = false };
+          bg_tile_map = Tile_map.Map_0; bg_win_tile_data = Tile_data.Mode_8000;
+          win_enable = true; win_tile_map = Tile_map.Map_0; lcd_ppu_enable = false
+          };
         stat =
-        { Lcd.ppu_mode = `Mode_2; ly_eq_lyc_flag = false;
+        { Lcd.ppu_mode = `OAM_search; ly_eq_lyc_flag = false;
           mode_0_interupt_enable = false; mode_1_interupt_enable = false;
           mode_2_interupt_enable = false; ly_eq_lyc_interupt_enable = false;
           ly = 0; lyc = 0; scx = 0; scy = 0; winx = 66; winy = 67 }

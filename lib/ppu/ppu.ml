@@ -1,4 +1,5 @@
 open Uint
+open StdLabels
 
 type t = {
     bg_palette : Palette.t;
@@ -9,7 +10,12 @@ type t = {
     oam : Oam.t;
     lcd : Lcd.t;
     mutable mcycles_in_current_mode : int;
+    framebuffer : Color.t array array;
   }
+
+type frame_progress =
+    | In_progress
+    | Finished of Color.t array array
 
 let create () =
     {
@@ -21,6 +27,7 @@ let create () =
       oam = Oam.create ();
       lcd = Lcd.create ();
       mcycles_in_current_mode = 0;
+      framebuffer = Array.make_matrix ~dimx:160 ~dimy:144 Color.White;
     }
 
 let accepts_address addr =
@@ -61,32 +68,61 @@ let write_byte t ~addr ~data =
     | addr_int when 0xFF40 <= addr_int && addr_int <= 0xFF4B -> Lcd.write_byte t.lcd ~addr ~data
     | _ -> failwith "Invalid gpu mem write address"
 
+let render_bg_window t ly =
+    let scx, scy = Lcd.get_scroll t.lcd in
+    let bg_tile_map = Lcd.get_bg_tile_map t.lcd in
+    let access_mode = Lcd.get_bg_win_access_mode t.lcd in
+    let y = (Uint8.to_int scy + ly) mod 256 in
+    let tile_y = y mod 8 in
+    let lx = ref 0 in
+    while !lx < 160 do
+      let x = (!lx + Uint8.to_int scx) mod 256 in
+      let tile_x = x mod 8 in
+      let tile_index = Tile_map.get_tile_index t.tile_map ~x ~y bg_tile_map in
+      let color =
+          Tile_data.get_pixel t.tiles access_mode tile_index ~x:tile_x ~y:tile_y t.bg_palette
+      in
+      t.framebuffer.(!lx).(ly) <- color;
+      incr lx
+    done
+
 let execute t ~mcycles =
     t.mcycles_in_current_mode <- t.mcycles_in_current_mode + mcycles;
-    let mode0_cycles = 51
-    and mode1_cycles = 1140
-    and mode2_cycles = 20
-    and mode3_cycles = 43 in
+    let hblank_cycles = 51
+    and vblank_cycles = 1140
+    and oam_search_cycles = 20
+    and drawing_cycles = 43 in
     if Lcd.ppu_is_enabled t.lcd then
       match Lcd.get_mode t.lcd with
-      | `Mode_0 ->
-          if t.mcycles_in_current_mode >= mode0_cycles then (
-            t.mcycles_in_current_mode <- t.mcycles_in_current_mode mod mode0_cycles;
+      | `HBlank ->
+          if t.mcycles_in_current_mode >= hblank_cycles then (
+            t.mcycles_in_current_mode <- t.mcycles_in_current_mode mod hblank_cycles;
             Lcd.incr_ly t.lcd;
             if Lcd.get_ly t.lcd = 144 then
-              Lcd.set_mode t.lcd `Mode_1
+              Lcd.set_mode t.lcd `VBlank
             else
-              Lcd.set_mode t.lcd `Mode_2)
-      | `Mode_2 ->
-          if t.mcycles_in_current_mode >= mode2_cycles then (
-            t.mcycles_in_current_mode <- t.mcycles_in_current_mode mod mode2_cycles;
-            Lcd.set_mode t.lcd `Mode_3)
-      | `Mode_3 ->
-          if t.mcycles_in_current_mode >= mode3_cycles then (
-            t.mcycles_in_current_mode <- t.mcycles_in_current_mode mod mode3_cycles;
-            Lcd.set_mode t.lcd `Mode_0)
-      | `Mode_1 ->
-          if t.mcycles_in_current_mode >= mode1_cycles then (
-            t.mcycles_in_current_mode <- t.mcycles_in_current_mode mod mode1_cycles;
+              Lcd.set_mode t.lcd `OAM_search);
+          In_progress
+      | `OAM_search ->
+          if t.mcycles_in_current_mode >= oam_search_cycles then (
+            t.mcycles_in_current_mode <- t.mcycles_in_current_mode mod oam_search_cycles;
+            Lcd.set_mode t.lcd `Drawing);
+          In_progress
+      | `Drawing ->
+          if t.mcycles_in_current_mode >= drawing_cycles then (
+            t.mcycles_in_current_mode <- t.mcycles_in_current_mode mod drawing_cycles;
+            (if Lcd.is_bg_win_enable t.lcd then
+               let ly = Lcd.get_ly t.lcd in
+               render_bg_window t ly);
+            Lcd.set_mode t.lcd `HBlank);
+          In_progress
+      | `VBlank ->
+          if t.mcycles_in_current_mode >= vblank_cycles then (
+            t.mcycles_in_current_mode <- t.mcycles_in_current_mode mod vblank_cycles;
             Lcd.reset_ly t.lcd;
-            Lcd.set_mode t.lcd `Mode_2)
+            Lcd.set_mode t.lcd `OAM_search;
+            Finished t.framebuffer)
+          else
+            In_progress
+    else
+      In_progress

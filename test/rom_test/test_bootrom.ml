@@ -13,12 +13,12 @@ let%expect_test "test loading bootrom" =
     let ppu = Ppu.create () in
     let wram = Ram.create ~start_addr:(Uint16.of_int 0xC000) ~end_addr:(Uint16.of_int 0xDFFF) in
     let hram = Ram.create ~start_addr:(Uint16.of_int 0xFF80) ~end_addr:(Uint16.of_int 0xFFFE) in
-    let vram = Ram.create ~start_addr:(Uint16.of_int 0x8000) ~end_addr:(Uint16.of_int 0x9FFF) in
-    let bus = Bus.create ~ppu ~wram ~hram ~vram ~boot_rom ~cartridge in
+    let bus = Bus.create ~ppu ~wram ~hram ~boot_rom ~cartridge in
     let cpu = Cpu.create ~bus in
     while Cpu.get_pc cpu <> 0x100 do
       let c = Cpu.step cpu in
-      Ppu.execute ppu ~mcycles:c
+      let _ = Ppu.execute ppu ~mcycles:c in
+      ()
     done;
     Cpu.show cpu |> print_endline;
     (* We don't have these registers yet, all of these apart from 0xFF50 are sound related *)

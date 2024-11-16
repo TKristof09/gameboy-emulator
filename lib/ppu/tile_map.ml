@@ -5,13 +5,18 @@ type t = {
     map1 : uint8 array array;
   }
 
+type map =
+    | Map_0
+    | Map_1
+[@@deriving show]
+
 let create () =
     { map0 = Array.make_matrix 32 32 Uint8.zero; map1 = Array.make_matrix 32 32 Uint8.zero }
 
 let get_tile_index t ~x ~y map_id =
     match map_id with
-    | `Map_0 -> t.map0.(y / 8).(x / 8)
-    | `Map_1 -> t.map1.(y / 8).(x / 8)
+    | Map_0 -> t.map0.(y / 8).(x / 8)
+    | Map_1 -> t.map1.(y / 8).(x / 8)
 
 let read_map m offset =
     let y = offset / 32
