@@ -1,7 +1,14 @@
 (library
  (name gameboy)
- (libraries stdint core)
+ (libraries stdint core bigstringaf)
  (preprocess
-  (pps ppx_deriving.show)))
+  (pps ppx_deriving.show))
+ (instrumentation
+  (backend landmarks)))
+
+(env
+ (release
+  (ocamlopt_flags
+   (:standard -O3))))
 
 (include_subdirs unqualified)

@@ -5,7 +5,8 @@ module Cpu = Cpu.Make (Mem)
 
 let create_cpu ?(data = []) ?(size = 0) () =
     let mem = Mock_memory.of_list size data in
-    (Cpu.create ~bus:mem, mem)
+    let interrupt_manager = Interrupt_manager.create () in
+    (Cpu.create ~bus:mem ~interrupt_manager, mem)
 
 let%expect_test "test cpu execute add8" =
     let cpu, _ = create_cpu () in
@@ -32,6 +33,32 @@ let%expect_test "test cpu step" =
     let _ = Cpu.step cpu in
     Cpu.show cpu |> print_endline;
     [%expect {| SP:0x0 PC:0x3 REG:A: 0x2a B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x0 H: 0x0 L: 0x0 |}]
+
+let%expect_test "LD8 [HL+] A" =
+    (* LD A 2; LD [HL+] A *)
+    let cpu, mem = create_cpu ~data:[ 0x3E; 0x02; 0x22 ] ~size:0xFFFF () in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    print_endline (Uint8.to_string_hex (Mem.read_byte mem Uint16.zero));
+    [%expect
+        {|
+      SP:0x0 PC:0x3 REG:A: 0x2 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x0 H: 0x0 L: 0x1
+      0x2
+      |}]
+
+let%expect_test "LD8 [HL-] A" =
+    (* LD A 2; LD [HL-] A *)
+    let cpu, mem = create_cpu ~data:[ 0x3E; 0x02; 0x32 ] ~size:0xFFFF () in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    print_endline (Uint8.to_string_hex (Mem.read_byte mem Uint16.zero));
+    [%expect
+        {|
+      SP:0x0 PC:0x3 REG:A: 0x2 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x0 H: 0xff L: 0xff
+      0x2
+      |}]
 
 let%expect_test "LD8 A 2" =
     let cpu, _ = create_cpu ~data:[ 0x3E; 0x02 ] ~size:0xFFFF () in
@@ -162,6 +189,21 @@ let%expect_test "JR C" =
         SP:0x0 PC:0x48 REG:A: 0x0 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0xb0 H: 0x0 L: 0x0 
         3
         |}]
+
+let%expect_test "JP None" =
+    (* ADD8 A 255; ADD8 A 1; JP None 0x42 *)
+    let cpu, _ = create_cpu ~data:[ 0xC6; 0xFF; 0xC6; 0x01; 0xC3; 0x42 ] ~size:0xFFFF () in
+
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    let c = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    Printf.printf "%d\n" c;
+    [%expect
+        {|
+      SP:0x0 PC:0x42 REG:A: 0x0 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0xb0 H: 0x0 L: 0x0
+      4
+      |}]
 
 let%expect_test "INC8" =
     (*  INC8 A *)
@@ -339,3 +381,93 @@ let%expect_test "CP not equal" =
     let _ = Cpu.step cpu in
     Cpu.show cpu |> print_endline;
     [%expect {| SP:0x0 PC:0x5 REG:A: 0x2 B: 0x3 C: 0x0 D: 0x0 E: 0x0 F: 0x70 H: 0x0 L: 0x0 |}]
+
+let%expect_test "AND" =
+    (*  LD A 5; AND A 3 *)
+    let cpu, _ = create_cpu ~data:[ 0x3E; 0x05; 0xE6; 0x03 ] ~size:0xFFFF () in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x0 PC:0x4 REG:A: 0x1 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x20 H: 0x0 L: 0x0 |}]
+
+let%expect_test "OR" =
+    (*  LD A 5; OR A 3 *)
+    let cpu, _ = create_cpu ~data:[ 0x3E; 0x05; 0xF6; 0x03 ] ~size:0xFFFF () in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x0 PC:0x4 REG:A: 0x7 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x0 H: 0x0 L: 0x0 |}]
+
+let%expect_test "SCF" =
+    (*  SCF *)
+    let cpu, _ = create_cpu ~data:[ 0x37 ] ~size:0xFFFF () in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x0 PC:0x1 REG:A: 0x0 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x10 H: 0x0 L: 0x0 |}]
+
+let%expect_test "ADD16 half carry" =
+    (*  LD HL 0xF00; LD BC 0x100; ADD16 HL BC *)
+    let cpu, _ = create_cpu ~data:[ 0x21; 0x00; 0x0F; 0x01; 0x00; 0x01; 0x09 ] ~size:0xFFFF () in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x0 PC:0x7 REG:A: 0x0 B: 0x1 C: 0x0 D: 0x0 E: 0x0 F: 0x20 H: 0x10 L: 0x0 |}]
+
+let%expect_test "ADD16 carry" =
+    (*  LD HL 0xFF00; LD BC 0x101; ADD16 HL BC *)
+    let cpu, _ = create_cpu ~data:[ 0x21; 0x00; 0xFF; 0x01; 0x01; 0x01; 0x09 ] ~size:0xFFFF () in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x0 PC:0x7 REG:A: 0x0 B: 0x1 C: 0x1 D: 0x0 E: 0x0 F: 0x30 H: 0x0 L: 0x1 |}]
+
+let%expect_test "ADD16 no carry" =
+    (*  LD HL 0x100; LD BC 0x102; ADD16 HL BC *)
+    let cpu, _ = create_cpu ~data:[ 0x21; 0x00; 0x01; 0x01; 0x02; 0x01; 0x09 ] ~size:0xFFFF () in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x0 PC:0x7 REG:A: 0x0 B: 0x1 C: 0x2 D: 0x0 E: 0x0 F: 0x0 H: 0x2 L: 0x2 |}]
+
+let%expect_test "CPL" =
+    (*  LD A 5; CPL *)
+    let cpu, _ = create_cpu ~data:[ 0x3E; 0x05; 0x2F ] ~size:0xFFFF () in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x0 PC:0x3 REG:A: 0xfa B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x60 H: 0x0 L: 0x0 |}]
+
+let%expect_test "SWAP" =
+    (*  LD A 0b11001010; SWAP 5 *)
+    let cpu, _ = create_cpu ~data:[ 0x3E; 0b11001010; 0xCB; 0x37 ] ~size:0xFFFF () in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x0 PC:0x4 REG:A: 0xac B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x0 H: 0x0 L: 0x0 |}]
+
+let%expect_test "RST 0x38" =
+    (* LD SP 0x0010; RST 0x38; RET  None*)
+    let cpu, mem = create_cpu ~data:[ 0x31; 0x10; 0x00; 0xFF ] ~size:0xFFFF () in
+    Mem.write_byte mem ~addr:(Uint16.of_int 0x0038) ~data:(Uint8.of_int 0xC9);
+
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect
+        {|
+      SP:0xe PC:0x38 REG:A: 0x0 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x0 H: 0x0 L: 0x0
+      SP:0x10 PC:0x4 REG:A: 0x0 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x0 H: 0x0 L: 0x0
+      |}]
+
+let%expect_test "RES 3 A" =
+    (*  LD A 0b11001010; RES 3 A *)
+    let cpu, _ = create_cpu ~data:[ 0x3E; 0b11001010; 0xCB; 0x9F ] ~size:0xFFFF () in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x0 PC:0x4 REG:A: 0xc2 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x0 H: 0x0 L: 0x0 |}]

@@ -1,11 +1,12 @@
 open Uint
 
-type t = { bytes : Bytes.t }
+type t = { bytes : Bigstringaf.t }
 
 let create bytes = { bytes }
 
 let read_byte t addr =
     let addr_int = Uint16.to_int addr in
-    Uint8.of_bytes_little_endian t.bytes addr_int
+    Bigstringaf.unsafe_get t.bytes addr_int |> uint8_of_char
 
-let write_byte _t ~addr:_ ~data:_ = failwith "Can't write to cartridge ROM"
+let write_byte _t ~addr ~data:_ =
+    Printf.printf "Can't write to cartridge ROM: %s\n" (Uint16.to_string_hex addr)

@@ -67,6 +67,13 @@ let create () =
 let set_mode t mode = t.stat.ppu_mode <- mode
 let get_mode t = t.stat.ppu_mode
 
+let show_mode m =
+    match m with
+    | `HBlank -> "HBlank"
+    | `VBlank -> "VBlank"
+    | `OAM_search -> "OAM Search"
+    | `Drawing -> "Drawing"
+
 let incr_ly t =
     t.stat.ly <- t.stat.ly + 1;
     t.stat.ly_eq_lyc_flag <- t.stat.ly = t.stat.lyc
@@ -77,12 +84,14 @@ let reset_ly t =
 
 let get_ly t = t.stat.ly
 let set_ly_eq_lyc t b = t.stat.ly_eq_lyc_flag <- b
-let get_scroll t = (t.stat.scx, t.stat.scy)
-let get_win t = (t.stat.winx, t.stat.winy)
+let get_scroll t = (Uint8.to_int t.stat.scx, Uint8.to_int t.stat.scy)
+let get_win_pos t = (Uint8.to_int t.stat.winx, Uint8.to_int t.stat.winy)
 let ppu_is_enabled t = t.control.lcd_ppu_enable
 let get_bg_tile_map t = t.control.bg_tile_map
 let get_bg_win_access_mode t = t.control.bg_win_tile_data
 let is_bg_win_enable t = t.control.bg_win_enable
+let is_win_enable t = t.control.win_enable
+let get_win_tile_map t = t.control.win_tile_map
 
 let read_control control =
     Bool.to_int control.bg_win_enable
@@ -129,14 +138,16 @@ let write_control control data =
 
 let write_stat stat data =
     let data = Uint8.to_int data in
-    stat.ppu_mode <-
-      (match data land 0b00000011 with
-      | 0 -> `HBlank
-      | 1 -> `VBlank
-      | 2 -> `OAM_search
-      | 3 -> `Drawing
-      | _ -> failwith "Invalid mode");
-    stat.ly_eq_lyc_flag <- data land 0b00000100 <> 0;
+    (* read only *)
+    (* stat.ppu_mode <- *)
+    (*   (match data land 0b00000011 with *)
+    (*   | 0 -> `HBlank *)
+    (*   | 1 -> `VBlank *)
+    (*   | 2 -> `OAM_search *)
+    (*   | 3 -> `Drawing *)
+    (*   | _ -> failwith "Invalid mode"); *)
+    (* read only *)
+    (* stat.ly_eq_lyc_flag <- data land 0b00000100 <> 0; *)
     stat.mode_0_interupt_enable <- data land 0b00001000 <> 0;
     stat.mode_1_interupt_enable <- data land 0b00010000 <> 0;
     stat.mode_2_interupt_enable <- data land 0b00100000 <> 0;

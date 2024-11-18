@@ -1,5 +1,7 @@
 include Stdint
 
+let uint8_of_char c = Char.code c |> Uint8.of_int
+
 let uint16_of_uint8s ~low ~high =
     let high = Uint16.shift_left (Uint16.of_uint8 high) 8
     and low = Uint16.of_uint8 low in

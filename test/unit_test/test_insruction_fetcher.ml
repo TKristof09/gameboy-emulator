@@ -89,7 +89,7 @@ let%expect_test "test fetch all" =
       0x27 Len: 1 Instr: DAA Branch: 1 Nobranch: 1
       0x28 Len: 2 Instr: JR Z, 0x34 Branch: 3 Nobranch: 2
       0x29 Len: 1 Instr: ADD16 HL, HL Branch: 2 Nobranch: 2
-      0x2a Len: 1 Instr: LD8 A, [HL] Branch: 2 Nobranch: 2
+      0x2a Len: 1 Instr: LD8 A, [HL+] Branch: 2 Nobranch: 2
       0x2b Len: 1 Instr: DEC16 HL Branch: 2 Nobranch: 2
       0x2c Len: 1 Instr: INC8 L Branch: 1 Nobranch: 1
       0x2d Len: 1 Instr: DEC8 L Branch: 1 Nobranch: 1

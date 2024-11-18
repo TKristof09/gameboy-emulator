@@ -2,6 +2,6 @@
  (name gameboy_rom_test)
  (libraries gameboy core)
  (inline_tests
-  (deps ../../roms/dmg_boot.bin ../../roms/cavern.gb))
+  (deps ../../roms/dmg_boot.bin ../../roms/tetris.gb))
  (preprocess
   (pps ppx_jane)))

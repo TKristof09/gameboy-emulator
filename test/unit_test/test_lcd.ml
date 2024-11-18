@@ -53,12 +53,12 @@ let%expect_test "write stat" =
           win_enable = true; win_tile_map = Tile_map.Map_0; lcd_ppu_enable = false
           };
         stat =
-        { Lcd.ppu_mode = `VBlank; ly_eq_lyc_flag = true;
+        { Lcd.ppu_mode = `OAM_search; ly_eq_lyc_flag = false;
           mode_0_interupt_enable = true; mode_1_interupt_enable = true;
           mode_2_interupt_enable = false; ly_eq_lyc_interupt_enable = false;
           ly = 0; lyc = 0; scx = 0; scy = 0; winx = 0; winy = 0 }
         }
-      0b11101
+      0b11010
       |}]
 
 let%expect_test "incr ly and write lcy" =

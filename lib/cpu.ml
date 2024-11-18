@@ -9,6 +9,8 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
       mutable pc : uint16;
       mutable sp : uint16;
       bus : Bus.t;
+      interrupt_manager : Interrupt_manager.t;
+      mutable enable_interrupt_nexti : bool;
     }
 
   let show cpu =
@@ -16,11 +18,29 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
       Printf.sprintf "SP:%s PC:%s REG:%s" (Uint16.to_string_hex cpu.sp)
         (Uint16.to_string_hex cpu.pc) (Registers.show cpu.registers)
 
-  let create ~bus = { registers = Registers.create (); pc = Uint16.zero; sp = Uint16.zero; bus }
+  let create ~bus ~interrupt_manager =
+      {
+        registers = Registers.create ();
+        pc = Uint16.zero;
+        sp = Uint16.zero;
+        bus;
+        interrupt_manager;
+        enable_interrupt_nexti = false;
+      }
 
   type advance_pc =
       | Nexti
       | Jump of uint16
+
+  let push_stack cpu data =
+      let open Uint16 in
+      cpu.sp <- cpu.sp - of_int 2;
+      Bus.write_word cpu.bus ~addr:cpu.sp ~data
+
+  let pop_stack cpu =
+      let res = Bus.read_word cpu.bus cpu.sp in
+      cpu.sp <- Uint16.(cpu.sp + of_int 2);
+      res
 
   let execute cpu instr instr_len mcycles_branch mcycles_nobranch =
       cpu.pc <- Uint16.(cpu.pc + instr_len);
@@ -93,14 +113,6 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
           | C -> Registers.read_flag cpu.registers Carry
           | NC -> not (Registers.read_flag cpu.registers Carry)
           | None -> true
-      and push_stack data =
-          let open Uint16 in
-          cpu.sp <- cpu.sp - of_int 2;
-          Bus.write_word cpu.bus ~addr:cpu.sp ~data
-      and pop_stack () =
-          let res = Bus.read_word cpu.bus cpu.sp in
-          cpu.sp <- Uint16.(cpu.sp + of_int 2);
-          res
       in
       let advance_pc =
           match instr with
@@ -112,6 +124,16 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
               Registers.set_flags cpu.registers ~z:(res = zero)
                 ~c:(vx > Uint8.max_int - vy)
                 ~h:(logand vx (of_int 0xF) + logand vy (of_int 0xF) > of_int 0xF)
+                ~s:false ();
+              write_arg x res;
+              Nexti
+          | ADD16 (x, y) ->
+              let open Uint16 in
+              let vx, vy = (read_arg x, read_arg y) in
+              let res = vx + vy in
+              Registers.set_flags cpu.registers
+                ~c:(vx > Uint16.max_int - vy)
+                ~h:(logand vx (of_int 0xFFF) + logand vy (of_int 0xFFF) > of_int 0xFFF)
                 ~s:false ();
               write_arg x res;
               Nexti
@@ -143,6 +165,20 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
               let vy = read_arg y in
               write_arg x vy;
               Nexti
+          | AND (x, y) ->
+              let open Uint8 in
+              let vx, vy = (read_arg x, read_arg y) in
+              let res = logand vx vy in
+              write_arg x res;
+              Registers.set_flags cpu.registers ~c:false ~h:true ~s:false ~z:(res = zero) ();
+              Nexti
+          | OR (x, y) ->
+              let open Uint8 in
+              let vx, vy = (read_arg x, read_arg y) in
+              let res = logor vx vy in
+              write_arg x res;
+              Registers.set_flags cpu.registers ~c:false ~h:false ~s:false ~z:(res = zero) ();
+              Nexti
           | XOR (x, y) ->
               let open Uint8 in
               let vx, vy = (read_arg x, read_arg y) in
@@ -160,6 +196,12 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
           | JR (c, x) ->
               if check_condition c then
                 let addr = Uint16.to_int cpu.pc + Int8.to_int x |> Uint16.of_int in
+                Jump addr
+              else
+                Nexti
+          | JP (c, x) ->
+              if check_condition c then
+                let addr = read_arg x in
                 Jump addr
               else
                 Nexti
@@ -195,22 +237,22 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
               Nexti
           | CALL (c, x) ->
               if check_condition c then (
-                push_stack cpu.pc;
+                push_stack cpu cpu.pc;
                 Jump x)
               else
                 Nexti
           | RET c ->
               if check_condition c then
-                let addr = pop_stack () in
+                let addr = pop_stack cpu in
                 Jump addr
               else
                 Nexti
           | PUSH x ->
               let data = read_arg x in
-              push_stack data;
+              push_stack cpu data;
               Nexti
           | POP x ->
-              let v = pop_stack () in
+              let v = pop_stack cpu in
               write_arg x v;
               Nexti
           | RL x ->
@@ -241,6 +283,49 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
                 ~h:(logand vx (of_int 0xF) < logand vy (of_int 0xF))
                 ~s:true ();
               Nexti
+          | DI ->
+              Interrupt_manager.set_master_enable cpu.interrupt_manager false;
+              cpu.enable_interrupt_nexti <- false;
+              Nexti
+          | EI ->
+              cpu.enable_interrupt_nexti <- true;
+              Nexti
+          | RETI ->
+              Interrupt_manager.set_master_enable cpu.interrupt_manager true;
+              let addr = pop_stack cpu in
+              Jump addr
+          | SCF ->
+              Registers.set_flags cpu.registers ~c:true ~h:false ~s:false ();
+              Nexti
+          | CPL ->
+              let a = Registers.read_r8 cpu.registers A in
+              Registers.write_r8 cpu.registers A (Uint8.lognot a);
+              Registers.set_flags cpu.registers ~s:true ~h:true ();
+              Nexti
+          | SWAP x ->
+              let open Uint8 in
+              let vx = read_arg x in
+              let lo = logand (of_int 0b00001111) vx in
+              let hi = logand (of_int 0b11110000) vx in
+              let res = shift_left lo 4 |> logor (shift_right_logical hi 4) in
+              write_arg x res;
+              Registers.set_flags cpu.registers ~z:(res = zero) ~s:false ~h:false ~c:false ();
+              Nexti
+          | RST x ->
+              push_stack cpu cpu.pc;
+              Jump x
+          | RES (e, x) ->
+              let vx = read_arg x in
+              write_arg x Uint8.(logand (lognot @@ shift_left one e) vx);
+              Nexti
+          | SLA x ->
+              let open Uint8 in
+              let vx = read_arg x in
+              let c = logand vx (of_int 0b10000000) <> zero in
+              let res = shift_left vx 1 in
+              write_arg x res;
+              Registers.set_flags cpu.registers ~z:(res = zero) ~s:false ~h:false ~c ();
+              Nexti
           | _ ->
               failwith (Printf.sprintf "%s:%s" "Unimplemented instruction" (Instruction.show instr))
       in
@@ -251,9 +336,29 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
           cpu.pc <- i;
           mcycles_branch
 
+  let handle_interrupt cpu (int : Interrupt_manager.interrupt_type) =
+      Printf.printf "Handling interrupt %s\n" (Interrupt_manager.show_interrupt_type int);
+      Interrupt_manager.set_master_enable cpu.interrupt_manager false;
+      Interrupt_manager.acknowledge_interrupt cpu.interrupt_manager int;
+      push_stack cpu cpu.pc;
+      (match int with
+      | VBlank -> cpu.pc <- Uint16.of_int 0x40
+      | LCD -> cpu.pc <- Uint16.of_int 0x48
+      | Timer -> cpu.pc <- Uint16.of_int 0x50
+      | Serial -> cpu.pc <- Uint16.of_int 0x58
+      | Joypad -> cpu.pc <- Uint16.of_int 0x60);
+      5
+
   let step cpu =
       let info = Instruction_fetcher.fetch cpu.bus ~pc:cpu.pc in
-      execute cpu info.instr info.len info.mcycles_branch info.mcycles_nobranch
+      (* Printf.printf "PC: %s -- %s\n" (Uint16.to_string_hex cpu.pc) (Instruction.show info.instr); *)
+      match Interrupt_manager.get_pending cpu.interrupt_manager with
+      | None ->
+          if cpu.enable_interrupt_nexti then (
+            Interrupt_manager.set_master_enable cpu.interrupt_manager true;
+            cpu.enable_interrupt_nexti <- false);
+          execute cpu info.instr info.len info.mcycles_branch info.mcycles_nobranch
+      | Some int -> handle_interrupt cpu int
 
-  let get_pc cpu = Uint16.to_int cpu.pc
+  let get_pc cpu = (Uint16.to_int cpu.pc, (Instruction_fetcher.fetch cpu.bus ~pc:cpu.pc).instr)
 end

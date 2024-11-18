@@ -93,26 +93,36 @@ let write_r16 t reg value =
         t.h <- h;
         t.l <- l
 
+let mask_carry = Uint8.of_int 0x10
+let mask_half_carry = Uint8.of_int 0x20
+let mask_sub = Uint8.of_int 0x40
+let mask_zero = Uint8.of_int 0x80
+
 let set_flag t flag =
     match flag with
-    | Carry -> t.f <- Uint8.(logor t.f (of_int 0x10))
-    | Half_carry -> t.f <- Uint8.(logor t.f (of_int 0x20))
-    | Sub -> t.f <- Uint8.(logor t.f (of_int 0x40))
-    | Zero -> t.f <- Uint8.(logor t.f (of_int 0x80))
+    | Carry -> t.f <- Uint8.(logor t.f mask_carry)
+    | Half_carry -> t.f <- Uint8.(logor t.f mask_half_carry)
+    | Sub -> t.f <- Uint8.(logor t.f mask_sub)
+    | Zero -> t.f <- Uint8.(logor t.f mask_zero)
+
+let mask_no_carry = Uint8.of_int 0b11101111
+let mask_no_half_carry = Uint8.of_int 0b11011111
+let mask_no_sub = Uint8.of_int 0b10111111
+let mask_no_zero = Uint8.of_int 0b01111111
 
 let unset_flag t flag =
     match flag with
-    | Carry -> t.f <- Uint8.(logand t.f (of_int 0b11101111))
-    | Half_carry -> t.f <- Uint8.(logand t.f (of_int 0b11011111))
-    | Sub -> t.f <- Uint8.(logand t.f (of_int 0b10111111))
-    | Zero -> t.f <- Uint8.(logand t.f (of_int 0b01111111))
+    | Carry -> t.f <- Uint8.(logand t.f mask_no_carry)
+    | Half_carry -> t.f <- Uint8.(logand t.f mask_no_half_carry)
+    | Sub -> t.f <- Uint8.(logand t.f mask_no_sub)
+    | Zero -> t.f <- Uint8.(logand t.f mask_no_zero)
 
 let read_flag t flag =
     match flag with
-    | Carry -> Uint8.(logand t.f (of_int 0x10)) <> Uint8.zero
-    | Half_carry -> Uint8.(logand t.f (of_int 0x20)) <> Uint8.zero
-    | Sub -> Uint8.(logand t.f (of_int 0x40)) <> Uint8.zero
-    | Zero -> Uint8.(logand t.f (of_int 0x80)) <> Uint8.zero
+    | Carry -> Uint8.(logand t.f mask_carry) <> Uint8.zero
+    | Half_carry -> Uint8.(logand t.f mask_half_carry) <> Uint8.zero
+    | Sub -> Uint8.(logand t.f mask_sub) <> Uint8.zero
+    | Zero -> Uint8.(logand t.f mask_zero) <> Uint8.zero
 
 let set_flags t ?(c = read_flag t Carry) ?(h = read_flag t Half_carry) ?(s = read_flag t Sub)
     ?(z = read_flag t Zero) () =

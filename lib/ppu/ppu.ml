@@ -9,6 +9,7 @@ type t = {
     tile_map : Tile_map.t;
     oam : Oam.t;
     lcd : Lcd.t;
+    interrupt_manager : Interrupt_manager.t;
     mutable mcycles_in_current_mode : int;
     framebuffer : Color.t array array;
   }
@@ -17,7 +18,7 @@ type frame_progress =
     | In_progress
     | Finished of Color.t array array
 
-let create () =
+let create interrupt_manager =
     {
       bg_palette = Palette.create ~addr:(Uint16.of_int 0xFF47);
       obj_palette_0 = Palette.create ~addr:(Uint16.of_int 0xFF48);
@@ -26,6 +27,7 @@ let create () =
       tile_map = Tile_map.create ();
       oam = Oam.create ();
       lcd = Lcd.create ();
+      interrupt_manager;
       mcycles_in_current_mode = 0;
       framebuffer = Array.make_matrix ~dimx:160 ~dimy:144 Color.White;
     }
@@ -39,6 +41,7 @@ let accepts_address addr =
     | addr_int when addr_int = 0xFF48 -> true
     | addr_int when addr_int = 0xFF49 -> true
     (* this is safe for the lcd since the palette addresses are already handled *)
+    | addr_int when addr_int = 0xFF46 -> false (* dma address is handled in the bus *)
     | addr_int when 0xFF40 <= addr_int && addr_int <= 0xFF4B -> true
     | _ -> false
 
@@ -69,27 +72,46 @@ let write_byte t ~addr ~data =
     | _ -> failwith "Invalid gpu mem write address"
 
 let render_bg_window t ly =
-    let scx, scy = Lcd.get_scroll t.lcd in
-    let bg_tile_map = Lcd.get_bg_tile_map t.lcd in
-    let access_mode = Lcd.get_bg_win_access_mode t.lcd in
-    let y = (Uint8.to_int scy + ly) mod 256 in
-    let tile_y = y mod 8 in
-    let lx = ref 0 in
-    while !lx < 160 do
-      let x = (!lx + Uint8.to_int scx) mod 256 in
-      let tile_x = x mod 8 in
-      let tile_index = Tile_map.get_tile_index t.tile_map ~x ~y bg_tile_map in
-      let color =
-          Tile_data.get_pixel t.tiles access_mode tile_index ~x:tile_x ~y:tile_y t.bg_palette
-      in
-      t.framebuffer.(!lx).(ly) <- color;
-      incr lx
-    done
+    let render_bg () =
+        let scx, scy = Lcd.get_scroll t.lcd in
+        let bg_tile_map = Lcd.get_bg_tile_map t.lcd in
+        let access_mode = Lcd.get_bg_win_access_mode t.lcd in
+        let y = (scy + ly) mod 256 in
+        let tile_y = y mod 8 in
+        Seq.init 160 (fun i -> i)
+        |> Seq.iter (fun lx ->
+               let x = (lx + scx) mod 256 in
+               let tile_x = x mod 8 in
+               let tile_index = Tile_map.get_tile_index t.tile_map ~x ~y bg_tile_map in
+               let color =
+                   Tile_data.get_pixel t.tiles access_mode tile_index ~x:tile_x ~y:tile_y
+                     t.bg_palette
+               in
+               t.framebuffer.(lx).(ly) <- color)
+    and render_win () =
+        let wx, wy = Lcd.get_win_pos t.lcd in
+        if wy <= ly && ly <= wy + 256 && wx <= 160 then
+          let win_tile_map = Lcd.get_win_tile_map t.lcd in
+          let access_mode = Lcd.get_bg_win_access_mode t.lcd in
+          let y = ly - wy in
+          let tile_y = y mod 8 in
+          Seq.init (160 - wx) (fun i -> i)
+          |> Seq.iter (fun x ->
+                 let tile_x = x mod 8 in
+                 let tile_index = Tile_map.get_tile_index t.tile_map ~x ~y win_tile_map in
+                 let color =
+                     Tile_data.get_pixel t.tiles access_mode tile_index ~x:tile_x ~y:tile_y
+                       t.bg_palette
+                 in
+                 t.framebuffer.(x + wx).(ly) <- color)
+    in
+    render_bg ();
+    if Lcd.is_win_enable t.lcd then render_win ()
 
 let execute t ~mcycles =
     t.mcycles_in_current_mode <- t.mcycles_in_current_mode + mcycles;
     let hblank_cycles = 51
-    and vblank_cycles = 1140
+    and vblank_one_line_cycles = 114
     and oam_search_cycles = 20
     and drawing_cycles = 43 in
     if Lcd.ppu_is_enabled t.lcd then
@@ -98,8 +120,9 @@ let execute t ~mcycles =
           if t.mcycles_in_current_mode >= hblank_cycles then (
             t.mcycles_in_current_mode <- t.mcycles_in_current_mode mod hblank_cycles;
             Lcd.incr_ly t.lcd;
-            if Lcd.get_ly t.lcd = 144 then
-              Lcd.set_mode t.lcd `VBlank
+            if Lcd.get_ly t.lcd = 144 then (
+              Lcd.set_mode t.lcd `VBlank;
+              Interrupt_manager.request_interrupt t.interrupt_manager VBlank)
             else
               Lcd.set_mode t.lcd `OAM_search);
           In_progress
@@ -117,11 +140,15 @@ let execute t ~mcycles =
             Lcd.set_mode t.lcd `HBlank);
           In_progress
       | `VBlank ->
-          if t.mcycles_in_current_mode >= vblank_cycles then (
-            t.mcycles_in_current_mode <- t.mcycles_in_current_mode mod vblank_cycles;
-            Lcd.reset_ly t.lcd;
-            Lcd.set_mode t.lcd `OAM_search;
-            Finished t.framebuffer)
+          if t.mcycles_in_current_mode >= vblank_one_line_cycles then (
+            t.mcycles_in_current_mode <- t.mcycles_in_current_mode mod vblank_one_line_cycles;
+            if Lcd.get_ly t.lcd < 154 then (
+              Lcd.incr_ly t.lcd;
+              In_progress)
+            else (
+              Lcd.reset_ly t.lcd;
+              Lcd.set_mode t.lcd `OAM_search;
+              Finished t.framebuffer))
           else
             In_progress
     else

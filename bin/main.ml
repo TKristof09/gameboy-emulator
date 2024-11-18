@@ -1,8 +1,8 @@
 open Gameboy
-open Gameboy.Uint
 module Cpu = Cpu.Make (Bus)
 open Core
 open Tsdl
+open Tsdl_ttf
 
 let orig_width, orig_height = (160, 144)
 let scale = 4
@@ -14,6 +14,21 @@ let sdl_check = function
         Sdl.log "%s" e;
         exit 1
     | Ok x -> x
+
+let font =
+    Ttf.init () |> sdl_check;
+    Ttf.open_font "resources/DejaVuSans.ttf" 13 |> sdl_check
+
+let render_text renderer text ~x ~y =
+    let color = Sdl.Color.create ~r:0 ~g:0 ~b:0 ~a:255 in
+    let surface = Ttf.render_text_solid font text color |> sdl_check in
+    let text_texture = Sdl.create_texture_from_surface renderer surface |> sdl_check in
+    let _, _, (w, h) = Sdl.query_texture text_texture |> sdl_check in
+    Sdl.set_texture_blend_mode text_texture Sdl.Blend.mode_none |> sdl_check;
+    let text_rect = Sdl.Rect.create ~x ~y ~w ~h in
+    (* Sdl.render_fill_rect renderer (Some text_rect) |> sdl_check; *)
+    Sdl.render_copy renderer ~dst:text_rect text_texture |> sdl_check;
+    Sdl.free_surface surface
 
 let render_framebuffer renderer texture fb =
     let copy_framebuffer fb pixels =
@@ -33,35 +48,107 @@ let render_framebuffer renderer texture fb =
     |> fst (* lock_texture returns pixels,pitch *)
     |> copy_framebuffer fb;
     Sdl.unlock_texture texture;
-    Sdl.render_copy renderer texture |> sdl_check;
-    Sdl.render_present renderer
+    Sdl.render_copy renderer texture |> sdl_check
 
 let main cpu ppu texture renderer =
+    let pause = ref false in
+    let step = ref false in
+    let bp = ref None in
+    let handle_events () =
+        let ev = Sdl.Event.create () in
+        if Sdl.poll_event (Some ev) then
+          let ev_type = Sdl.Event.(get ev typ) in
+          match Sdl.Event.enum ev_type with
+          | `Key_down -> (
+              let scancode = Sdl.Event.(get ev keyboard_scancode) in
+              match Sdl.Scancode.enum scancode with
+              | `P -> pause := not !pause
+              | `S ->
+                  render_text renderer (Printf.sprintf "%s" (Cpu.show cpu)) ~x:0 ~y:60;
+                  Sdl.render_present renderer
+              | `Period ->
+                  step := true;
+                  render_text renderer (Printf.sprintf "%s" (Cpu.show cpu)) ~x:0 ~y:60;
+                  Sdl.render_present renderer
+              | `B -> (
+                  pause := true;
+                  Printf.printf "Enter breakpoint\n";
+                  Out_channel.(flush stdout);
+                  let line = In_channel.(input_line_exn stdin) in
+                  bp := Scanf.sscanf_opt line " 0x%x" (fun x -> x);
+                  match !bp with
+                  | None -> Printf.printf "Breakpoint cleared\n"
+                  | Some x -> Printf.printf "Set bp to 0x%X\n" x)
+              | `Escape -> exit 0
+              | _ -> ())
+          | `Mouse_wheel ->
+              step := true;
+              render_text renderer (Printf.sprintf "%s" (Cpu.show cpu)) ~x:0 ~y:60;
+              Sdl.render_present renderer
+          | `Quit ->
+              print_endline "Quitting...";
+              exit 0
+          | _ -> ()
+    in
     let start_time = ref (Time_ns.now ()) in
-    while Cpu.get_pc cpu <> 0x100 do
+    let i = ref 0 in
+    let fps = ref 0 in
+    while true do
+      while !pause && not !step do
+        handle_events ();
+        Out_channel.flush Out_channel.stdout
+      done;
+      handle_events ();
       let c = Cpu.step cpu in
+      let pc, instr = Cpu.get_pc cpu in
+      if pc = 0x100 then pause := true;
+      (match !bp with
+      | None -> ()
+      | Some x -> if pc = x then pause := true);
+      (* Printf.printf "PC: %#x  - %s: %s\n" pc (Instruction.show instr) (Cpu.show cpu); *)
       match Ppu.execute ppu ~mcycles:c with
-      | In_progress -> ()
+      | In_progress -> step := false
       | Finished framebuffer ->
           render_framebuffer renderer texture framebuffer;
-          let duration = Time_ns.diff (Time_ns.now ()) !start_time in
+          (* render_text renderer *)
+          (*   (Printf.sprintf "PC: %#x  - %s" pc (Instruction.show instr)) *)
+          (*   ~x:0 ~y:20; *)
           let open Time_ns.Span in
+          let duration = Time_ns.diff (Time_ns.now ()) !start_time in
           if duration < target_frame_time then
-            Int32.of_int_exn (to_int_ms (target_frame_time - duration)) |> Sdl.delay;
-          start_time := Time_ns.now ()
+            (* Int32.of_int_exn (to_int_ms (target_frame_time - duration)) |> Sdl.delay; *)
+            ();
+          let open Int in
+          fps := !fps + Time_ns.Span.to_int_ms (Time_ns.diff (Time_ns.now ()) !start_time);
+          if !i = 10 then (
+            render_text renderer
+              (Printf.sprintf "FPS: %.0f" (10000.0 /. Int.to_float !fps))
+              ~x:0 ~y:40;
+            i := 0;
+            fps := 0);
+          start_time := Time_ns.now ();
+          Sdl.render_present renderer;
+          step := false;
+          incr i
     done
 
 let () =
     let open Core in
+    let boot_rom = In_channel.read_all "./roms/dmg_boot.bin" in
     let boot_rom =
-        In_channel.read_all "./roms/dmg_boot.bin" |> Bytes.of_string |> Cartridge.create
+        Bigstringaf.of_string ~off:0 ~len:(String.length boot_rom) boot_rom |> Cartridge.create
     in
-    let cartridge = In_channel.read_all "./roms/cavern.gb" |> Bytes.of_string |> Cartridge.create in
-    let ppu = Ppu.create () in
+    let cartridge = In_channel.read_all "./roms/tetris.gb" in
+    let cartridge =
+        Bigstringaf.of_string ~off:0 ~len:(String.length cartridge) cartridge |> Cartridge.create
+    in
+    let open Gameboy.Uint in
     let wram = Ram.create ~start_addr:(Uint16.of_int 0xC000) ~end_addr:(Uint16.of_int 0xDFFF) in
     let hram = Ram.create ~start_addr:(Uint16.of_int 0xFF80) ~end_addr:(Uint16.of_int 0xFFFE) in
-    let bus = Bus.create ~ppu ~wram ~hram ~boot_rom ~cartridge in
-    let cpu = Cpu.create ~bus in
+    let interrupt_manager = Interrupt_manager.create () in
+    let ppu = Ppu.create interrupt_manager in
+    let bus = Bus.create ~ppu ~wram ~hram ~boot_rom ~cartridge ~interrupt_manager in
+    let cpu = Cpu.create ~bus ~interrupt_manager in
 
     Sdl.init Sdl.Init.(video + events) |> sdl_check;
     let win, renderer =

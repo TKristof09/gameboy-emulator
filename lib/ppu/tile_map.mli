@@ -5,7 +5,7 @@ type t
 type map =
     | Map_0
     | Map_1
-    [@@deriving show]
+[@@deriving show]
 
 val create : unit -> t
 
