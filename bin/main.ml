@@ -50,20 +50,27 @@ let render_framebuffer renderer texture fb =
     Sdl.unlock_texture texture;
     Sdl.render_copy renderer texture |> sdl_check
 
-let main cpu ppu texture renderer =
+let main cpu ppu joypad texture renderer =
     let pause = ref false in
     let step = ref false in
     let bp = ref None in
+    let pause_emu () =
+        render_text renderer "--PAUSED--" ~x:0 ~y:10;
+        Sdl.render_present renderer;
+        pause := true
+    in
     let handle_events () =
         let ev = Sdl.Event.create () in
         if Sdl.poll_event (Some ev) then
           let ev_type = Sdl.Event.(get ev typ) in
           match Sdl.Event.enum ev_type with
           | `Key_down -> (
-              let scancode = Sdl.Event.(get ev keyboard_scancode) in
-              match Sdl.Scancode.enum scancode with
-              | `P -> pause := not !pause
-              | `S ->
+              let scancode = Sdl.Event.(get ev keyboard_scancode) |> Sdl.Scancode.enum in
+              match scancode with
+              | `P ->
+                  pause := not !pause;
+                  if !pause then pause_emu ()
+              | `Comma ->
                   render_text renderer (Printf.sprintf "%s" (Cpu.show cpu)) ~x:0 ~y:60;
                   Sdl.render_present renderer
               | `Period ->
@@ -71,7 +78,7 @@ let main cpu ppu texture renderer =
                   render_text renderer (Printf.sprintf "%s" (Cpu.show cpu)) ~x:0 ~y:60;
                   Sdl.render_present renderer
               | `B -> (
-                  pause := true;
+                  pause_emu ();
                   Printf.printf "Enter breakpoint\n";
                   Out_channel.(flush stdout);
                   let line = In_channel.(input_line_exn stdin) in
@@ -79,7 +86,27 @@ let main cpu ppu texture renderer =
                   match !bp with
                   | None -> Printf.printf "Breakpoint cleared\n"
                   | Some x -> Printf.printf "Set bp to 0x%X\n" x)
+              | `D -> Joypad.press joypad Up
+              | `T -> Joypad.press joypad Down
+              | `R -> Joypad.press joypad Left
+              | `S -> Joypad.press joypad Right
+              | `H -> Joypad.press joypad A
+              | `A -> Joypad.press joypad B
+              | `E -> Joypad.press joypad Start
+              | `I -> Joypad.press joypad Select
               | `Escape -> exit 0
+              | _ -> ())
+          | `Key_up -> (
+              let scancode = Sdl.Event.(get ev keyboard_scancode) |> Sdl.Scancode.enum in
+              match scancode with
+              | `D -> Joypad.release joypad Up
+              | `T -> Joypad.release joypad Down
+              | `R -> Joypad.release joypad Left
+              | `S -> Joypad.release joypad Right
+              | `H -> Joypad.release joypad A
+              | `A -> Joypad.release joypad B
+              | `E -> Joypad.release joypad Start
+              | `I -> Joypad.release joypad Select
               | _ -> ())
           | `Mouse_wheel ->
               step := true;
@@ -96,15 +123,16 @@ let main cpu ppu texture renderer =
     while true do
       while !pause && not !step do
         handle_events ();
+        render_text renderer "--PAUSED--" ~x:0 ~y:10;
         Out_channel.flush Out_channel.stdout
       done;
       handle_events ();
       let c = Cpu.step cpu in
       let pc, instr = Cpu.get_pc cpu in
-      if pc = 0x100 then pause := true;
+      if pc = 0x100 then pause_emu ();
       (match !bp with
       | None -> ()
-      | Some x -> if pc = x then pause := true);
+      | Some x -> if pc = x then pause_emu ());
       (* Printf.printf "PC: %#x  - %s: %s\n" pc (Instruction.show instr) (Cpu.show cpu); *)
       match Ppu.execute ppu ~mcycles:c with
       | In_progress -> step := false
@@ -116,8 +144,7 @@ let main cpu ppu texture renderer =
           let open Time_ns.Span in
           let duration = Time_ns.diff (Time_ns.now ()) !start_time in
           if duration < target_frame_time then
-            (* Int32.of_int_exn (to_int_ms (target_frame_time - duration)) |> Sdl.delay; *)
-            ();
+            Int32.of_int_exn (to_int_ms (target_frame_time - duration)) |> Sdl.delay;
           let open Int in
           fps := !fps + Time_ns.Span.to_int_ms (Time_ns.diff (Time_ns.now ()) !start_time);
           if !i = 10 then (
@@ -147,7 +174,8 @@ let () =
     let hram = Ram.create ~start_addr:(Uint16.of_int 0xFF80) ~end_addr:(Uint16.of_int 0xFFFE) in
     let interrupt_manager = Interrupt_manager.create () in
     let ppu = Ppu.create interrupt_manager in
-    let bus = Bus.create ~ppu ~wram ~hram ~boot_rom ~cartridge ~interrupt_manager in
+    let joypad = Joypad.create interrupt_manager in
+    let bus = Bus.create ~ppu ~wram ~hram ~boot_rom ~cartridge ~interrupt_manager ~joypad in
     let cpu = Cpu.create ~bus ~interrupt_manager in
 
     Sdl.init Sdl.Init.(video + events) |> sdl_check;
@@ -161,7 +189,7 @@ let () =
         |> sdl_check
     in
 
-    main cpu ppu texture renderer;
+    main cpu ppu joypad texture renderer;
 
     Sdl.destroy_window win;
     Sdl.destroy_renderer renderer;

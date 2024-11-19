@@ -320,48 +320,6 @@ let%expect_test "POP 0x102" =
     Cpu.show cpu |> print_endline;
     [%expect {| SP:0x10 PC:0x8 REG:A: 0x0 B: 0x1 C: 0x2 D: 0x1 E: 0x2 F: 0x0 H: 0x0 L: 0x0 |}]
 
-let%expect_test "RL no carry" =
-    (* LD8 A 4; RL A *)
-    let cpu, _ = create_cpu ~data:[ 0x3E; 0x04; 0xCB; 0x17 ] ~size:0xFFFF () in
-
-    let _ = Cpu.step cpu in
-    let _ = Cpu.step cpu in
-    Cpu.show cpu |> print_endline;
-    [%expect {| SP:0x0 PC:0x4 REG:A: 0x8 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x0 H: 0x0 L: 0x0 |}]
-
-let%expect_test "RL carry" =
-    (* LD A 255; ADD A 1; LD8 B 0x84; RL B *)
-    let cpu, _ =
-        create_cpu ~data:[ 0x3E; 0xFF; 0xC6; 0x01; 0x06; 0x84; 0xCB; 0x10 ] ~size:0xFFFF ()
-    in
-
-    let _ = Cpu.step cpu in
-    let _ = Cpu.step cpu in
-    let _ = Cpu.step cpu in
-    let _ = Cpu.step cpu in
-    Cpu.show cpu |> print_endline;
-    [%expect {| SP:0x0 PC:0x8 REG:A: 0x0 B: 0x9 C: 0x0 D: 0x0 E: 0x0 F: 0x10 H: 0x0 L: 0x0 |}]
-
-let%expect_test "RLA no carry" =
-    (* LD8 A 4; RLA *)
-    let cpu, _ = create_cpu ~data:[ 0x3E; 0x04; 0x17 ] ~size:0xFFFF () in
-
-    let _ = Cpu.step cpu in
-    let _ = Cpu.step cpu in
-    Cpu.show cpu |> print_endline;
-    [%expect {| SP:0x0 PC:0x3 REG:A: 0x8 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x0 H: 0x0 L: 0x0 |}]
-
-let%expect_test "RLA carry" =
-    (* LD A 0xFF; ADD A 1; LD8 A 0x84; RLA *)
-    let cpu, _ = create_cpu ~data:[ 0x3E; 0xFF; 0xC6; 0x02; 0x3E; 0x84; 0x17 ] ~size:0xFFFF () in
-
-    let _ = Cpu.step cpu in
-    let _ = Cpu.step cpu in
-    let _ = Cpu.step cpu in
-    let _ = Cpu.step cpu in
-    Cpu.show cpu |> print_endline;
-    [%expect {| SP:0x0 PC:0x7 REG:A: 0x9 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x10 H: 0x0 L: 0x0 |}]
-
 let%expect_test "CP equal" =
     (*  LD A 2; LD B 2; CP A B *)
     let cpu, _ = create_cpu ~data:[ 0x3E; 0x02; 0x06; 0x02; 0xB8 ] ~size:0xFFFF () in
@@ -471,3 +429,221 @@ let%expect_test "RES 3 A" =
     let _ = Cpu.step cpu in
     Cpu.show cpu |> print_endline;
     [%expect {| SP:0x0 PC:0x4 REG:A: 0xc2 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x0 H: 0x0 L: 0x0 |}]
+
+let%expect_test "SLA A" =
+    (*  LD A 0b10000010; SLA A *)
+    let cpu, _ = create_cpu ~data:[ 0x3E; 0b10000010; 0xCB; 0x27 ] ~size:0xFFFF () in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x0 PC:0x4 REG:A: 0x4 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x10 H: 0x0 L: 0x0 |}]
+
+let%expect_test "SRL A" =
+    (*  LD A 0b10000011; SRL A *)
+    let cpu, _ = create_cpu ~data:[ 0x3E; 0b10000011; 0xCB; 0x3F ] ~size:0xFFFF () in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x0 PC:0x4 REG:A: 0x41 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x10 H: 0x0 L: 0x0 |}]
+
+let%expect_test "RL no carry" =
+    (* LD8 A 4; RL A *)
+    let cpu, _ = create_cpu ~data:[ 0x3E; 0x04; 0xCB; 0x17 ] ~size:0xFFFF () in
+
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x0 PC:0x4 REG:A: 0x8 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x0 H: 0x0 L: 0x0 |}]
+
+let%expect_test "RL carry" =
+    (* LD A 255; ADD A 1; LD8 B 0x84; RL B *)
+    let cpu, _ =
+        create_cpu ~data:[ 0x3E; 0xFF; 0xC6; 0x01; 0x06; 0x84; 0xCB; 0x10 ] ~size:0xFFFF ()
+    in
+
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x0 PC:0x8 REG:A: 0x0 B: 0x9 C: 0x0 D: 0x0 E: 0x0 F: 0x10 H: 0x0 L: 0x0 |}]
+
+let%expect_test "RLA no carry" =
+    (* LD8 A 4; RLA *)
+    let cpu, _ = create_cpu ~data:[ 0x3E; 0x04; 0x17 ] ~size:0xFFFF () in
+
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x0 PC:0x3 REG:A: 0x8 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x0 H: 0x0 L: 0x0 |}]
+
+let%expect_test "RLA carry" =
+    (* LD A 0xFF; ADD A 1; LD8 A 0x84; RLA *)
+    let cpu, _ = create_cpu ~data:[ 0x3E; 0xFF; 0xC6; 0x02; 0x3E; 0x84; 0x17 ] ~size:0xFFFF () in
+
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x0 PC:0x7 REG:A: 0x9 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x10 H: 0x0 L: 0x0 |}]
+
+let%expect_test "RLC carry" =
+    (* LD8 B 0b11010001; RLC B *)
+    let cpu, _ = create_cpu ~data:[ 0x06; 0b11010001; 0xCB; 0x00 ] ~size:0xFFFF () in
+
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x0 PC:0x4 REG:A: 0x0 B: 0xa3 C: 0x0 D: 0x0 E: 0x0 F: 0x10 H: 0x0 L: 0x0 |}]
+
+let%expect_test "RLC no carry" =
+    (* LD8 B 0b01010001; RLC B *)
+    let cpu, _ = create_cpu ~data:[ 0x06; 0b01010001; 0xCB; 0x00 ] ~size:0xFFFF () in
+
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x0 PC:0x4 REG:A: 0x0 B: 0xa2 C: 0x0 D: 0x0 E: 0x0 F: 0x0 H: 0x0 L: 0x0 |}]
+
+let%expect_test "RLCA carry" =
+    (* LD8 A 0b11010001; RLC B *)
+    let cpu, _ = create_cpu ~data:[ 0x3E; 0b11010001; 0x07 ] ~size:0xFFFF () in
+
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x0 PC:0x3 REG:A: 0xa3 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x10 H: 0x0 L: 0x0 |}]
+
+let%expect_test "RLCA no carry" =
+    (* LD8 A 0b01010001; RLC B *)
+    let cpu, _ = create_cpu ~data:[ 0x3E; 0b01010001; 0x07 ] ~size:0xFFFF () in
+
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x0 PC:0x3 REG:A: 0xa2 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x0 H: 0x0 L: 0x0 |}]
+
+let%expect_test "RR no carry" =
+    (* LD8 A 4; RR A *)
+    let cpu, _ = create_cpu ~data:[ 0x3E; 0x04; 0xCB; 0x1F ] ~size:0xFFFF () in
+
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x0 PC:0x4 REG:A: 0x2 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x0 H: 0x0 L: 0x0 |}]
+
+let%expect_test "RR carry" =
+    (* LD A 255; ADD A 1; LD8 B 0b10000001; RR B *)
+    let cpu, _ =
+        create_cpu ~data:[ 0x3E; 0xFF; 0xC6; 0x01; 0x06; 0b10000001; 0xCB; 0x18 ] ~size:0xFFFF ()
+    in
+
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x0 PC:0x8 REG:A: 0x0 B: 0xc0 C: 0x0 D: 0x0 E: 0x0 F: 0x10 H: 0x0 L: 0x0 |}]
+
+let%expect_test "RRA no carry" =
+    (* LD8 A 4; RRA *)
+    let cpu, _ = create_cpu ~data:[ 0x3E; 0x04; 0x1F ] ~size:0xFFFF () in
+
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x0 PC:0x3 REG:A: 0x2 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x0 H: 0x0 L: 0x0 |}]
+
+let%expect_test "RRA carry" =
+    (* LD A 0xFF; ADD A 2; LD8 A 0b10000001; RRA *)
+    let cpu, _ =
+        create_cpu ~data:[ 0x3E; 0xFF; 0xC6; 0x02; 0x3E; 0b10000001; 0x1F ] ~size:0xFFFF ()
+    in
+
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x0 PC:0x7 REG:A: 0xc0 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x10 H: 0x0 L: 0x0 |}]
+
+let%expect_test "RRC carry" =
+    (* LD8 B 0b11010001; RRC B *)
+    let cpu, _ = create_cpu ~data:[ 0x06; 0b11010001; 0xCB; 0x08 ] ~size:0xFFFF () in
+
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x0 PC:0x4 REG:A: 0x0 B: 0xe8 C: 0x0 D: 0x0 E: 0x0 F: 0x10 H: 0x0 L: 0x0 |}]
+
+let%expect_test "RRC no carry" =
+    (* LD8 B 0b01010010; RRC B *)
+    let cpu, _ = create_cpu ~data:[ 0x06; 0b01010010; 0xCB; 0x08 ] ~size:0xFFFF () in
+
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x0 PC:0x4 REG:A: 0x0 B: 0x29 C: 0x0 D: 0x0 E: 0x0 F: 0x0 H: 0x0 L: 0x0 |}]
+
+let%expect_test "RRCA carry" =
+    (* LD8 A 0b11010001; RRC B *)
+    let cpu, _ = create_cpu ~data:[ 0x3E; 0b11010001; 0x0F ] ~size:0xFFFF () in
+
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x0 PC:0x3 REG:A: 0xe8 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x10 H: 0x0 L: 0x0 |}]
+
+let%expect_test "RRCA no carry" =
+    (* LD8 A 0b01010010; RRC B *)
+    let cpu, _ = create_cpu ~data:[ 0x3E; 0b01010010; 0x0F ] ~size:0xFFFF () in
+
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x0 PC:0x3 REG:A: 0x29 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x0 H: 0x0 L: 0x0 |}]
+
+let%expect_test "DAA carry" =
+    (* LD A 0x90; ADD A 0x80; DAA *)
+    let cpu, _ = create_cpu ~data:[ 0x3E; 0x90; 0xC6; 0x80; 0x27 ] ~size:0xFFFF () in
+
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x0 PC:0x6 REG:A: 0x70 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x10 H: 0x0 L: 0x0 |}]
+
+let%expect_test "DAA" =
+    (* LD A 0x54; ADD A 0x28; DAA *)
+    let cpu, _ = create_cpu ~data:[ 0x3E; 0x54; 0xC6; 0x28; 0x27 ] ~size:0xFFFF () in
+
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x0 PC:0x6 REG:A: 0x82 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x0 H: 0x0 L: 0x0 |}]
+
+let%expect_test "DAA sub" =
+    (* LD A 0x20; SUB A 0x13; DAA *)
+    let cpu, _ = create_cpu ~data:[ 0x3E; 0x20; 0xD6; 0x13; 0x27 ] ~size:0xFFFF () in
+
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x0 PC:0x6 REG:A: 0x7 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x40 H: 0x0 L: 0x0 |}]
+
+let%expect_test "DAA sub carry" =
+    (* LD A 0x5; SUB A 0x21; DAA *)
+    let cpu, _ = create_cpu ~data:[ 0x3E; 0x5; 0xD6; 0x21; 0x27 ] ~size:0xFFFF () in
+
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x0 PC:0x6 REG:A: 0x84 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x50 H: 0x0 L: 0x0 |}]

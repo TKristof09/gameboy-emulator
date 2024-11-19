@@ -7,11 +7,12 @@ type t = {
     boot_rom : Cartridge.t;
     cartridge : Cartridge.t;
     interrupt_manager : Interrupt_manager.t;
+    joypad : Joypad.t;
     mutable is_boot_rom_disabled : bool;
     mutable dma : uint8;
   }
 
-let create ~ppu ~wram ~hram ~boot_rom ~cartridge ~interrupt_manager =
+let create ~ppu ~wram ~hram ~boot_rom ~cartridge ~interrupt_manager ~joypad =
     {
       ppu;
       wram;
@@ -19,6 +20,7 @@ let create ~ppu ~wram ~hram ~boot_rom ~cartridge ~interrupt_manager =
       boot_rom;
       cartridge;
       interrupt_manager;
+      joypad;
       is_boot_rom_disabled = false;
       dma = Uint8.zero;
     }
@@ -38,7 +40,7 @@ let read_byte t addr =
     | 0xFF46 -> t.dma
     (* illegal addresses return 0 according to some sources and FF according to others so idk *)
     | addr_int when 0xFEA0 <= addr_int && addr_int <= 0xFEFF -> Uint8.of_int 0x00
-    | 0xFF00 -> Uint8.max_int
+    | 0xFF00 -> Joypad.read_byte t.joypad addr
     | _ ->
         failwith @@ Printf.sprintf "Unhandled memory location read %s" (Uint16.to_string_hex addr)
 
@@ -63,7 +65,8 @@ let write_byte t ~addr ~data =
     | addr_int when 0xFEA0 <= addr_int && addr_int <= 0xFEFF ->
         (* This just does nothing but the program can "write" to it, (tetris does this, apparently is a bug but is legal) *)
         ()
-    | _ -> Printf.printf "Unhandled memory location write %s\n" (Uint16.to_string_hex addr)
+    | 0xFF00 -> Joypad.write_byte t.joypad ~addr ~data
+    | _ -> Tsdl.Sdl.log "Unhandled memory location write %s\n" (Uint16.to_string_hex addr)
 
 let read_word t addr =
     let lo = read_byte t addr in

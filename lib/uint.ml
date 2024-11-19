@@ -16,3 +16,22 @@ let pp_uint8 fmt x = Format.fprintf fmt "@[%s@]" (Uint8.to_string x)
 let show_uint8 = Uint8.to_string
 let pp_uint16 fmt x = Format.fprintf fmt "@[%s@]" (Uint16.to_string x)
 let show_uint16 = Uint16.to_string
+
+let byte_to_bits b =
+    let open Uint8 in
+    [|
+      logand b (of_int 0b10000000) <> zero;
+      logand b (of_int 0b01000000) <> zero;
+      logand b (of_int 0b00100000) <> zero;
+      logand b (of_int 0b00010000) <> zero;
+      logand b (of_int 0b00001000) <> zero;
+      logand b (of_int 0b00000100) <> zero;
+      logand b (of_int 0b00000010) <> zero;
+      logand b (of_int 0b00000001) <> zero;
+    |]
+
+(** Onder [|b7, b6, b5, ... b0|] *)
+let bits_to_byte b =
+    let open Core in
+    Array.foldi b ~init:Uint8.zero ~f:(fun i acc bit ->
+        Uint8.add acc (Uint8.of_int (Bool.to_int bit lsl (7 - i))))

@@ -255,26 +255,6 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
               let v = pop_stack cpu in
               write_arg x v;
               Nexti
-          | RL x ->
-              let open Uint8 in
-              let vx = read_arg x in
-              let c = if Registers.read_flag cpu.registers Carry then one else zero in
-              let res = logor (shift_left vx 1) c in
-              write_arg x res;
-              (* check if bit 7 was set in x *)
-              let new_c = logand vx (of_int 0x80) <> zero in
-              Registers.set_flags cpu.registers ~z:(res = zero) ~s:false ~h:false ~c:new_c ();
-              Nexti
-          | RLA ->
-              let open Uint8 in
-              let a = Registers.read_r8 cpu.registers A in
-              let c = if Registers.read_flag cpu.registers Carry then one else zero in
-              let res = logor (shift_left a 1) c in
-              Registers.write_r8 cpu.registers A res;
-              (* check if bit 7 was set in a *)
-              let new_c = logand a (of_int 0x80) <> zero in
-              Registers.set_flags cpu.registers ~z:false ~s:false ~h:false ~c:new_c ();
-              Nexti
           | CP (x, y) ->
               let open Uint8 in
               let vx, vy = (read_arg x, read_arg y) in
@@ -326,6 +306,109 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
               write_arg x res;
               Registers.set_flags cpu.registers ~z:(res = zero) ~s:false ~h:false ~c ();
               Nexti
+          | SRL x ->
+              let open Uint8 in
+              let vx = read_arg x in
+              let c = logand vx one <> zero in
+              let res = shift_right_logical vx 1 in
+              write_arg x res;
+              Registers.set_flags cpu.registers ~z:(res = zero) ~s:false ~h:false ~c ();
+              Nexti
+          | RL x ->
+              let open Uint8 in
+              let vx = read_arg x in
+              let c = if Registers.read_flag cpu.registers Carry then one else zero in
+              let res = logor (shift_left vx 1) c in
+              write_arg x res;
+              (* check if bit 7 was set in x *)
+              let new_c = logand vx (of_int 0x80) <> zero in
+              Registers.set_flags cpu.registers ~z:(res = zero) ~s:false ~h:false ~c:new_c ();
+              Nexti
+          | RLA ->
+              let open Uint8 in
+              let a = Registers.read_r8 cpu.registers A in
+              let c = if Registers.read_flag cpu.registers Carry then one else zero in
+              let res = logor (shift_left a 1) c in
+              Registers.write_r8 cpu.registers A res;
+              (* check if bit 7 was set in a *)
+              let new_c = logand a (of_int 0x80) <> zero in
+              Registers.set_flags cpu.registers ~z:false ~s:false ~h:false ~c:new_c ();
+              Nexti
+          | RLC x ->
+              let open Uint8 in
+              let vx = read_arg x in
+              let c = if logand vx (of_int 0b10000000) <> zero then one else zero in
+              let res = logor (shift_left vx 1) c in
+              write_arg x res;
+              Registers.set_flags cpu.registers ~z:(res = zero) ~s:false ~h:false ~c:(c <> zero) ();
+              Nexti
+          | RLCA ->
+              let open Uint8 in
+              let a = Registers.read_r8 cpu.registers A in
+              let c = if logand a (of_int 0b10000000) <> zero then one else zero in
+              let res = logor (shift_left a 1) c in
+              Registers.write_r8 cpu.registers A res;
+              Registers.set_flags cpu.registers ~z:false ~s:false ~h:false ~c:(c <> zero) ();
+              Nexti
+          | RR x ->
+              let open Uint8 in
+              let vx = read_arg x in
+              let c = Registers.read_flag cpu.registers Carry in
+              let hi_bit = if c then of_int 0b10000000 else zero in
+              let res = logor (shift_right_logical vx 1) hi_bit in
+              write_arg x res;
+              (* check if bit 0 was set in x *)
+              let new_c = logand vx one <> zero in
+              Registers.set_flags cpu.registers ~z:(res = zero) ~s:false ~h:false ~c:new_c ();
+              Nexti
+          | RRA ->
+              let open Uint8 in
+              let a = Registers.read_r8 cpu.registers A in
+              let c = Registers.read_flag cpu.registers Carry in
+              let hi_bit = if c then of_int 0b10000000 else zero in
+              let res = logor (shift_right_logical a 1) hi_bit in
+              Registers.write_r8 cpu.registers A res;
+              (* check if bit 0 was set in x *)
+              let new_c = logand a one <> zero in
+              Registers.set_flags cpu.registers ~z:false ~s:false ~h:false ~c:new_c ();
+              Nexti
+          | RRC x ->
+              let open Uint8 in
+              let vx = read_arg x in
+              let lo_bit = logand vx one in
+              let res = logor (shift_right_logical vx 1) (shift_left lo_bit 7) in
+              write_arg x res;
+              let new_c = lo_bit <> zero in
+              Registers.set_flags cpu.registers ~z:(res = zero) ~s:false ~h:false ~c:new_c ();
+              Nexti
+          | RRCA ->
+              let open Uint8 in
+              let a = Registers.read_r8 cpu.registers A in
+              let lo_bit = logand a one in
+              let res = logor (shift_right_logical a 1) (shift_left lo_bit 7) in
+              Registers.write_r8 cpu.registers A res;
+              let new_c = lo_bit <> zero in
+              Registers.set_flags cpu.registers ~z:false ~s:false ~h:false ~c:new_c ();
+              Nexti
+          | DAA ->
+              let open Uint8 in
+              let a = Registers.read_r8 cpu.registers A in
+              let hc = Registers.read_flag cpu.registers Half_carry in
+              let c = Registers.read_flag cpu.registers Carry in
+              let s = Registers.read_flag cpu.registers Sub in
+              let a_int = to_int a in
+              let offset = if ((not s) && a_int land 0x0F > 0x09) || hc then 0x06 else 0x00 in
+              let should_carry = ((not s) && a_int > 0x99) || c in
+              let offset = if should_carry then offset lor 0x60 else offset in
+              let res =
+                  if s then
+                    a - of_int offset
+                  else
+                    a + of_int offset
+              in
+              Registers.set_flags cpu.registers ~z:(res = zero) ~h:false ~c:should_carry ();
+              Registers.write_r8 cpu.registers A res;
+              Nexti
           | _ ->
               failwith (Printf.sprintf "%s:%s" "Unimplemented instruction" (Instruction.show instr))
       in
@@ -337,7 +420,7 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
           mcycles_branch
 
   let handle_interrupt cpu (int : Interrupt_manager.interrupt_type) =
-      Printf.printf "Handling interrupt %s\n" (Interrupt_manager.show_interrupt_type int);
+      Tsdl.Sdl.log "Handling interrupt %s\n" (Interrupt_manager.show_interrupt_type int);
       Interrupt_manager.set_master_enable cpu.interrupt_manager false;
       Interrupt_manager.acknowledge_interrupt cpu.interrupt_manager int;
       push_stack cpu cpu.pc;

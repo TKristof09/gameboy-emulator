@@ -34,24 +34,10 @@ let read_byte t addr =
     |> Array.map ~f:(fun id ->
            let hi, lo = Color_id.id_to_bits id in
            if is_lo then lo else hi)
-    |> Array.foldi ~init:Uint8.zero ~f:(fun i acc bit ->
-           Uint8.add acc (Uint8.of_int (Bool.to_int bit lsl (7 - i))))
+    |> Uint.bits_to_byte
 
 let write_byte t ~addr ~data =
-    let byte_to_bits b =
-        let open Uint8 in
-        [|
-          logand b (of_int 0b10000000) <> zero;
-          logand b (of_int 0b01000000) <> zero;
-          logand b (of_int 0b00100000) <> zero;
-          logand b (of_int 0b00010000) <> zero;
-          logand b (of_int 0b00001000) <> zero;
-          logand b (of_int 0b00000100) <> zero;
-          logand b (of_int 0b00000010) <> zero;
-          logand b (of_int 0b00000001) <> zero;
-        |]
-    in
-    let bits = byte_to_bits data in
+    let bits = Uint.byte_to_bits data in
     let offset = Uint16.(addr - data_addr) |> Uint16.to_int in
     let index = offset / 16 in
     let y = offset mod 16 / 2 in

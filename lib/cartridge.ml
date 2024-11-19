@@ -9,4 +9,4 @@ let read_byte t addr =
     Bigstringaf.unsafe_get t.bytes addr_int |> uint8_of_char
 
 let write_byte _t ~addr ~data:_ =
-    Printf.printf "Can't write to cartridge ROM: %s\n" (Uint16.to_string_hex addr)
+    Tsdl.Sdl.log "Can't write to cartridge ROM: %s\n" (Uint16.to_string_hex addr)

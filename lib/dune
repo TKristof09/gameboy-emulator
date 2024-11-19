@@ -1,6 +1,6 @@
 (library
  (name gameboy)
- (libraries stdint core bigstringaf)
+ (libraries stdint core bigstringaf tsdl)
  (preprocess
   (pps ppx_deriving.show))
  (instrumentation
