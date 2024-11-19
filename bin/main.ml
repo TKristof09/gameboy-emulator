@@ -79,13 +79,13 @@ let main cpu ppu joypad texture renderer =
                   Sdl.render_present renderer
               | `B -> (
                   pause_emu ();
-                  Printf.printf "Enter breakpoint\n";
+                  Sdl.log "Enter breakpoint\n";
                   Out_channel.(flush stdout);
                   let line = In_channel.(input_line_exn stdin) in
                   bp := Scanf.sscanf_opt line " 0x%x" (fun x -> x);
                   match !bp with
-                  | None -> Printf.printf "Breakpoint cleared\n"
-                  | Some x -> Printf.printf "Set bp to 0x%X\n" x)
+                  | None -> Sdl.log "Breakpoint cleared\n"
+                  | Some x -> Sdl.log "Set bp to 0x%X\n" x)
               | `D -> Joypad.press joypad Up
               | `T -> Joypad.press joypad Down
               | `R -> Joypad.press joypad Left

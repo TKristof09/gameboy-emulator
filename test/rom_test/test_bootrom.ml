@@ -16,7 +16,8 @@ let%expect_test "test loading bootrom" =
     let hram = Ram.create ~start_addr:(Uint16.of_int 0xFF80) ~end_addr:(Uint16.of_int 0xFFFE) in
     let interrupt_manager = Interrupt_manager.create () in
     let ppu = Ppu.create interrupt_manager in
-    let bus = Bus.create ~ppu ~wram ~hram ~boot_rom ~cartridge ~interrupt_manager in
+    let joypad = Joypad.create interrupt_manager in
+    let bus = Bus.create ~ppu ~wram ~hram ~boot_rom ~cartridge ~interrupt_manager ~joypad in
     let cpu = Cpu.create ~bus ~interrupt_manager in
     while fst @@ Cpu.get_pc cpu <> 0x100 do
       let c = Cpu.step cpu in
@@ -28,15 +29,15 @@ let%expect_test "test loading bootrom" =
     (* We don't have these registers yet, all of these apart from 0xFF50 are sound related *)
     [%expect
         {|
-      Unhandled memory location write 0xff26
-      Unhandled memory location write 0xff11
-      Unhandled memory location write 0xff12
-      Unhandled memory location write 0xff25
-      Unhandled memory location write 0xff24
-      Unhandled memory location write 0xff13
-      Unhandled memory location write 0xff14
-      Unhandled memory location write 0xff13
-      Unhandled memory location write 0xff14
+      INFO: Unhandled memory location write 0xff26
+      INFO: Unhandled memory location write 0xff11
+      INFO: Unhandled memory location write 0xff12
+      INFO: Unhandled memory location write 0xff25
+      INFO: Unhandled memory location write 0xff24
+      INFO: Unhandled memory location write 0xff13
+      INFO: Unhandled memory location write 0xff14
+      INFO: Unhandled memory location write 0xff13
+      INFO: Unhandled memory location write 0xff14
       SP:0xfffe PC:0x100 REG:A: 0x1 B: 0x0 C: 0x13 D: 0x0 E: 0xd8 F: 0xb0 H: 0x1 L: 0x4d
       1
       |}]
