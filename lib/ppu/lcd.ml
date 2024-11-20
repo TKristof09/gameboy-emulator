@@ -91,7 +91,9 @@ let get_bg_tile_map t = t.control.bg_tile_map
 let get_bg_win_access_mode t = t.control.bg_win_tile_data
 let is_bg_win_enable t = t.control.bg_win_enable
 let is_win_enable t = t.control.win_enable
+let is_obj_enable t = t.control.obj_enable
 let get_win_tile_map t = t.control.win_tile_map
+let get_obj_height t = if t.control.obj_size = `OBJ_size_8x8 then 8 else 16
 
 let read_control control =
     Bool.to_int control.bg_win_enable

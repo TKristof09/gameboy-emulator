@@ -294,9 +294,13 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
           | RST x ->
               push_stack cpu cpu.pc;
               Jump x
-          | RES (e, x) ->
+          | RES (n, x) ->
               let vx = read_arg x in
-              write_arg x Uint8.(logand (lognot @@ shift_left one e) vx);
+              write_arg x Uint8.(logand (lognot @@ shift_left one n) vx);
+              Nexti
+          | SET (n, x) ->
+              let vx = read_arg x in
+              write_arg x Uint8.(logor (shift_left one n) vx);
               Nexti
           | SLA x ->
               let open Uint8 in

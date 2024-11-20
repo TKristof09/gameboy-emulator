@@ -18,8 +18,8 @@ let%expect_test "test" =
     print_endline (Uint8.to_string_bin (Oam.read_byte oam (Uint16.of_int 0xFE03)));
     [%expect
         {|
-      { Oam.x = 7; y = 42; tile_index = 1; priority = `BG_WIN_prio; y_flip = false;
-        x_flip = true; palette = `OBP1 }
+      { Oam.x = 255; y = 26; tile_index = 1; priority = `BG_WIN_prio;
+        y_flip = false; x_flip = true; palette = `OBP1 }
       0b101010
       0b111
       0b1

@@ -14,14 +14,17 @@ let create () =
     let open Core in
     { tiles = Array.init 384 ~f:(fun _ -> Array.make_matrix ~dimx:8 ~dimy:8 Color_id.ID_0) }
 
-let get_pixel t access_mode tile_id ~x ~y pal =
+let get_pixel_color_id t access_mode tile_id ~x ~y =
     let tile_id = if y >= 8 then Uint8.(tile_id + one) else tile_id in
     let y = if y >= 8 then y - 8 else y in
     match access_mode with
-    | Mode_8000 -> Palette.get_color pal t.tiles.(Uint8.to_int tile_id).(y).(x)
+    | Mode_8000 -> t.tiles.(Uint8.to_int tile_id).(y).(x)
     | Mode_8800 ->
         let tile_id = tile_id |> Int8.of_uint8 |> Int8.to_int in
-        Palette.get_color pal t.tiles.(tile_id + 256).(y).(x)
+        t.tiles.(tile_id + 256).(y).(x)
+
+let get_pixel t access_mode tile_id ~x ~y pal =
+    Palette.get_color pal (get_pixel_color_id t access_mode tile_id ~x ~y)
 
 (* a byte corresponds to a row of color ids' low or hi bits *)
 let read_byte t addr =

@@ -43,9 +43,10 @@ let read_byte t addr =
     let offset = addr - 0xFE00 in
     let obj_id = offset / 4 in
     let byte_num = offset mod 4 in
+    let open Uint8 in
     match byte_num with
-    | 0 -> t.mem.(obj_id).y
-    | 1 -> t.mem.(obj_id).x
+    | 0 -> t.mem.(obj_id).y + of_int 16
+    | 1 -> t.mem.(obj_id).x + of_int 8
     | 2 -> t.mem.(obj_id).tile_index
     | 3 -> attribs_to_byte t.mem.(obj_id)
     | _ -> failwith "The rules of arithmetics have been broken"
@@ -55,12 +56,12 @@ let write_byte t ~addr ~data =
     let offset = addr - 0xFE00 in
     let obj_id = offset / 4 in
     let byte_num = offset mod 4 in
+    let open Uint8 in
     match byte_num with
-    | 0 -> t.mem.(obj_id).y <- data
-    | 1 -> t.mem.(obj_id).x <- data
+    | 0 -> t.mem.(obj_id).y <- data - of_int 16
+    | 1 -> t.mem.(obj_id).x <- data - of_int 8
     | 2 -> t.mem.(obj_id).tile_index <- data
     | 3 ->
-        let open Uint8 in
         t.mem.(obj_id).priority <-
           (if logand data (of_int 0b10000000) <> zero then `BG_WIN_prio else `OBJ_prio);
         t.mem.(obj_id).y_flip <- logand data (of_int 0b01000000) <> zero;

@@ -13,4 +13,8 @@ val get_pixel : t -> access_mode -> uint8 -> x:int -> y:int -> Palette.t -> Colo
 (** 
     [x] and [y] are the coordinates inside the tile *)
 
+val get_pixel_color_id : t -> access_mode -> Stdint.Uint8.t -> x:int -> y:int -> Color_id.t
+(** 
+    [x] and [y] are the coordinates inside the tile *)
+
 include Addressable_intf.ByteAddressable with type t := t

@@ -108,6 +108,41 @@ let render_bg_window t ly =
     render_bg ();
     if Lcd.is_win_enable t.lcd then render_win ()
 
+let render_objects t ly =
+    let open Core in
+    let obj_height = Lcd.get_obj_height t.lcd in
+    Oam.get_objects t.oam
+    |> Array.filter ~f:(fun (o : Oam.obj) ->
+           let y = Uint8.to_int o.y in
+           ly >= y && ly - y <= obj_height - 1)
+    |> Array.iteri ~f:(fun i (o : Oam.obj) ->
+           if i >= 10 then
+             ()
+           else
+             let y = ly - Uint8.to_int o.y in
+             let palette =
+                 match o.palette with
+                 | `OBP0 -> t.obj_palette_0
+                 | `OBP1 -> t.obj_palette_1
+             in
+             Seq.init 8 (fun x -> x)
+             |> Seq.iter (fun x ->
+                    let lx = x + Uint8.to_int o.x in
+                    if lx > 0 && lx <= 160 then
+                      let color_id =
+                          Tile_data.get_pixel_color_id t.tiles Mode_8000 o.tile_index
+                            ~x:(if o.x_flip then 7 - x else x)
+                            ~y:(if o.y_flip then obj_height - y - 1 else y)
+                      in
+                      match color_id with
+                      | ID_0 -> ()
+                      | _ -> (
+                          match (o.priority, t.framebuffer.(lx).(ly)) with
+                          | `OBJ_prio, _
+                          | _, White ->
+                              t.framebuffer.(lx).(ly) <- Palette.get_color palette color_id
+                          | _ -> ())))
+
 let execute t ~mcycles =
     t.mcycles_in_current_mode <- t.mcycles_in_current_mode + mcycles;
     let hblank_cycles = 51
@@ -134,9 +169,9 @@ let execute t ~mcycles =
       | `Drawing ->
           if t.mcycles_in_current_mode >= drawing_cycles then (
             t.mcycles_in_current_mode <- t.mcycles_in_current_mode mod drawing_cycles;
-            (if Lcd.is_bg_win_enable t.lcd then
-               let ly = Lcd.get_ly t.lcd in
-               render_bg_window t ly);
+            let ly = Lcd.get_ly t.lcd in
+            if Lcd.is_bg_win_enable t.lcd then render_bg_window t ly;
+            if Lcd.is_obj_enable t.lcd then render_objects t ly;
             Lcd.set_mode t.lcd `HBlank);
           In_progress
       | `VBlank ->
