@@ -647,3 +647,27 @@ let%expect_test "DAA sub carry" =
     let _ = Cpu.step cpu in
     Cpu.show cpu |> print_endline;
     [%expect {| SP:0x0 PC:0x6 REG:A: 0x84 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x50 H: 0x0 L: 0x0 |}]
+
+let%expect_test "ADDSP half carry" =
+    (* LD SP 0x000F; ADDSP 0x1 *)
+    let cpu, _ = create_cpu ~data:[ 0x31; 0x0F; 0x00; 0xE8; 0x1 ] ~size:0xFFFF () in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x10 PC:0x5 REG:A: 0x0 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x20 H: 0x0 L: 0x0 |}]
+
+let%expect_test "ADDSP carry" =
+    (* LD SP 0x00F0; ADDSP 0x10 *)
+    let cpu, _ = create_cpu ~data:[ 0x31; 0xF0; 0x00; 0xE8; 0x10 ] ~size:0xFFFF () in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x100 PC:0x5 REG:A: 0x0 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x10 H: 0x0 L: 0x0 |}]
+
+let%expect_test "ADDSP negative" =
+    (* LD SP 0x00F0; ADDSP -1 *)
+    let cpu, _ = create_cpu ~data:[ 0x31; 0xF0; 0x00; 0xE8; -1 ] ~size:0xFFFF () in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0xef PC:0x5 REG:A: 0x0 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x10 H: 0x0 L: 0x0 |}]

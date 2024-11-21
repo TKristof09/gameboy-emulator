@@ -44,6 +44,7 @@ let read_byte t addr =
     | addr_int when 0xFEA0 <= addr_int && addr_int <= 0xFEFF -> Uint8.of_int 0x00
     | 0xFF00 -> Joypad.read_byte t.joypad addr
     | addr_int when 0xFF04 <= addr_int && addr_int <= 0xFF07 -> Timer.read_byte t.timer addr
+    | 0xFF4D -> Uint8.max_int (* speed switch, gcb only functionality *)
     | _ ->
         failwith @@ Printf.sprintf "Unhandled memory location read %s" (Uint16.to_string_hex addr)
 

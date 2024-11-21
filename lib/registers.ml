@@ -70,7 +70,9 @@ let write_r8 t reg value =
     | C -> t.c <- value
     | D -> t.d <- value
     | E -> t.e <- value
-    | F -> t.f <- value
+    | F ->
+        (* the lower 4 bits of the flag register are hardwired to 0 *)
+        t.f <- Uint8.logand value (Uint8.of_int 0xF0)
     | H -> t.h <- value
     | L -> t.l <- value
 
@@ -79,7 +81,8 @@ let write_r16 t reg value =
     | AF ->
         let f, a = uint8s_of_uint16 value in
         t.a <- a;
-        t.f <- f
+        (* the lower 4 bits of the flag register are hardwired to 0 *)
+        t.f <- Uint8.logand f (Uint8.of_int 0xF0)
     | BC ->
         let c, b = uint8s_of_uint16 value in
         t.b <- b;

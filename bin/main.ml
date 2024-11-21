@@ -124,12 +124,16 @@ let main cpu ppu joypad timer texture renderer =
       while !pause && not !step do
         handle_events ();
         render_text renderer "--PAUSED--" ~x:0 ~y:10;
-        Out_channel.flush Out_channel.stdout
+        Out_channel.flush Out_channel.stdout;
+        Sdl.delay 16l
       done;
       handle_events ();
       let c = Cpu.step cpu in
-      let pc, _ = Cpu.get_pc cpu in
-      if pc = 0x100 then pause_emu ();
+      let pc, instr = Cpu.get_pc cpu in
+      (* if pc = 0xc012 then pause_emu (); *)
+      (match instr with
+      | LD8 (Offset a, Reg8 A) when Uint.Uint8.to_int a = 0x07 -> pause_emu ()
+      | _ -> ());
       (match !bp with
       | None -> ()
       | Some x -> if pc = x then pause_emu ());
@@ -166,7 +170,7 @@ let () =
     let boot_rom =
         Bigstringaf.of_string ~off:0 ~len:(String.length boot_rom) boot_rom |> Cartridge.create
     in
-    let cartridge = In_channel.read_all "./roms/tetris.gb" in
+    let cartridge = In_channel.read_all "./test/resources/test_roms/cpu_instrs/individual/02.gb" in
     let cartridge =
         Bigstringaf.of_string ~off:0 ~len:(String.length cartridge) cartridge |> Cartridge.create
     in
@@ -179,6 +183,7 @@ let () =
     let timer = Timer.create interrupt_manager in
     let bus = Bus.create ~ppu ~wram ~hram ~boot_rom ~cartridge ~interrupt_manager ~joypad ~timer in
     let cpu = Cpu.create ~bus ~interrupt_manager in
+    Cpu.skip_boot_rom cpu;
 
     Sdl.init Sdl.Init.(video + events) |> sdl_check;
     let win, renderer =

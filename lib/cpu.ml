@@ -28,6 +28,20 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
         enable_interrupt_nexti = false;
       }
 
+  let skip_boot_rom cpu =
+      let open Uint8 in
+      Registers.write_r8 cpu.registers A (of_int 0x01);
+      Registers.write_r8 cpu.registers F (of_int 0xB0);
+      Registers.write_r8 cpu.registers B (of_int 0x00);
+      Registers.write_r8 cpu.registers C (of_int 0x13);
+      Registers.write_r8 cpu.registers D (of_int 0x00);
+      Registers.write_r8 cpu.registers E (of_int 0xD8);
+      Registers.write_r8 cpu.registers H (of_int 0x01);
+      Registers.write_r8 cpu.registers L (of_int 0x4D);
+      cpu.sp <- Uint16.of_int 0xFFFE;
+      cpu.pc <- Uint16.of_int 0x0100;
+      Bus.write_byte cpu.bus ~addr:(Uint16.of_int 0xFF50) ~data:Uint8.one
+
   type advance_pc =
       | Nexti
       | Jump of uint16
@@ -147,6 +161,15 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
                 ~h:(logand vx (of_int 0xF) + logand vy (of_int 0xF) + c > of_int 0xF)
                 ~s:false ();
               write_arg x res;
+              Nexti
+          | ADDSP n ->
+              let x = Uint16.to_int cpu.sp in
+              let y = Int8.to_int n in
+              cpu.sp <- Uint16.of_int (x + y);
+              Registers.set_flags cpu.registers ~z:false ~s:false
+                ~c:((x land 0xFF) + (y land 0xFF) > 0xFF)
+                ~h:((x land 0xF) + (y land 0xF) > 0xF)
+                ();
               Nexti
           | SUB (x, y) ->
               let open Uint8 in
@@ -438,7 +461,11 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
 
   let step cpu =
       let info = Instruction_fetcher.fetch cpu.bus ~pc:cpu.pc in
-      (* Printf.printf "PC: %s -- %s\n" (Uint16.to_string_hex cpu.pc) (Instruction.show info.instr); *)
+
+      (* Tsdl.Sdl.log "-----------------"; *)
+      (* Tsdl.Sdl.log "%s\n" (show cpu); *)
+      (* Tsdl.Sdl.log "PC: %s -- %s\n" (Uint16.to_string_hex cpu.pc) (Instruction.show info.instr); *)
+      (* Tsdl.Sdl.log "-----------------"; *)
       match Interrupt_manager.get_pending cpu.interrupt_manager with
       | None ->
           if cpu.enable_interrupt_nexti then (
