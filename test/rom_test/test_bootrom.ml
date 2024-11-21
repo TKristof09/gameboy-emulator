@@ -17,7 +17,8 @@ let%expect_test "test loading bootrom" =
     let interrupt_manager = Interrupt_manager.create () in
     let ppu = Ppu.create interrupt_manager in
     let joypad = Joypad.create interrupt_manager in
-    let bus = Bus.create ~ppu ~wram ~hram ~boot_rom ~cartridge ~interrupt_manager ~joypad in
+    let timer = Timer.create interrupt_manager in
+    let bus = Bus.create ~ppu ~wram ~hram ~boot_rom ~cartridge ~interrupt_manager ~joypad ~timer in
     let cpu = Cpu.create ~bus ~interrupt_manager in
     while fst @@ Cpu.get_pc cpu <> 0x100 do
       let c = Cpu.step cpu in

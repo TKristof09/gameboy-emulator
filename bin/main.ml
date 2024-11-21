@@ -50,7 +50,7 @@ let render_framebuffer renderer texture fb =
     Sdl.unlock_texture texture;
     Sdl.render_copy renderer texture |> sdl_check
 
-let main cpu ppu joypad texture renderer =
+let main cpu ppu joypad timer texture renderer =
     let pause = ref false in
     let step = ref false in
     let bp = ref None in
@@ -128,12 +128,13 @@ let main cpu ppu joypad texture renderer =
       done;
       handle_events ();
       let c = Cpu.step cpu in
-      let pc, instr = Cpu.get_pc cpu in
+      let pc, _ = Cpu.get_pc cpu in
       if pc = 0x100 then pause_emu ();
       (match !bp with
       | None -> ()
       | Some x -> if pc = x then pause_emu ());
       (* Printf.printf "PC: %#x  - %s: %s\n" pc (Instruction.show instr) (Cpu.show cpu); *)
+      Timer.run timer ~mcycles:c;
       match Ppu.execute ppu ~mcycles:c with
       | In_progress -> step := false
       | Finished framebuffer ->
@@ -175,7 +176,8 @@ let () =
     let interrupt_manager = Interrupt_manager.create () in
     let ppu = Ppu.create interrupt_manager in
     let joypad = Joypad.create interrupt_manager in
-    let bus = Bus.create ~ppu ~wram ~hram ~boot_rom ~cartridge ~interrupt_manager ~joypad in
+    let timer = Timer.create interrupt_manager in
+    let bus = Bus.create ~ppu ~wram ~hram ~boot_rom ~cartridge ~interrupt_manager ~joypad ~timer in
     let cpu = Cpu.create ~bus ~interrupt_manager in
 
     Sdl.init Sdl.Init.(video + events) |> sdl_check;
@@ -189,7 +191,7 @@ let () =
         |> sdl_check
     in
 
-    main cpu ppu joypad texture renderer;
+    main cpu ppu joypad timer texture renderer;
 
     Sdl.destroy_window win;
     Sdl.destroy_renderer renderer;
