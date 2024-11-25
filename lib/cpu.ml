@@ -89,7 +89,14 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
               let n = Registers.read_r8 cpu.registers C in
               let addr = Uint16.(of_int 0xFF00 + of_uint8 n) in
               Bus.read_byte cpu.bus addr
-          | SP_offset e -> Uint16.of_int (Uint16.to_int cpu.sp + Int8.to_int e)
+          | SP_offset e ->
+              let sp_int = Uint16.to_int cpu.sp in
+              let e_int = Int8.to_int e in
+              Registers.set_flags cpu.registers ~z:false ~s:false
+                ~h:((sp_int land 0xF) + (e_int land 0xF) > 0xF)
+                ~c:((sp_int land 0xFF) + (e_int land 0xFF) > 0xFF)
+                ();
+              Uint16.of_int (sp_int + e_int)
       and write_arg : type a. a arg -> a -> unit =
          fun arg v ->
           match arg with
@@ -155,10 +162,11 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
               let open Uint8 in
               let c = if Registers.read_flag cpu.registers Carry then one else zero in
               let vx, vy = (read_arg x, read_arg y) in
-              let res = vx + vy + c in
+              let vy = vy + c in
+              let res = vx + vy in
               Registers.set_flags cpu.registers ~z:(res = zero)
-                ~c:(vx > Uint8.max_int - vy - c)
-                ~h:(logand vx (of_int 0xF) + logand vy (of_int 0xF) + c > of_int 0xF)
+                ~c:(vx > Uint8.max_int - vy)
+                ~h:(logand vx (of_int 0xF) + logand vy (of_int 0xF) > of_int 0xF)
                 ~s:false ();
               write_arg x res;
               Nexti
@@ -174,6 +182,17 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
           | SUB (x, y) ->
               let open Uint8 in
               let vx, vy = (read_arg x, read_arg y) in
+              let res = vx - vy in
+              Registers.set_flags cpu.registers ~z:(res = zero) ~c:(vx < vy)
+                ~h:(logand vx (of_int 0xF) < logand vy (of_int 0xF))
+                ~s:true ();
+              write_arg x res;
+              Nexti
+          | SBC (x, y) ->
+              let open Uint8 in
+              let vx, vy = (read_arg x, read_arg y) in
+              let c = if Registers.read_flag cpu.registers Carry then one else zero in
+              let vy = vy + c in
               let res = vx - vy in
               Registers.set_flags cpu.registers ~z:(res = zero) ~c:(vx < vy)
                 ~h:(logand vx (of_int 0xF) < logand vy (of_int 0xF))

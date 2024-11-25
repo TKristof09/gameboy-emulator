@@ -17,7 +17,6 @@ val get_bg_win_access_mode : t -> Tile_data.access_mode
 val is_bg_win_enable : t -> bool
 val is_win_enable : t -> bool
 val is_obj_enable : t -> bool
-
 val get_win_tile_map : t -> Tile_map.map
 val get_obj_height : t -> int
 

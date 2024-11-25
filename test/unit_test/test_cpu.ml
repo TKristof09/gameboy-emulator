@@ -72,6 +72,39 @@ let%expect_test "LD16 HL 0x0102" =
     Cpu.show cpu |> print_endline;
     [%expect {| SP:0x0 PC:0x3 REG:A: 0x0 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x0 H: 0x1 L: 0x2 |}]
 
+let%expect_test "LD16 HL SP+0x01 no flags" =
+    (* LD SP 0x0010; LD HL SP+0x01 *)
+    let cpu, _ = create_cpu ~data:[ 0x31; 0x10; 0x00; 0xF8; 0x01 ] ~size:0xFFFF () in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x10 PC:0x5 REG:A: 0x0 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x0 H: 0x0 L: 0x11 |}]
+
+let%expect_test "LD16 HL SP+0x01 carry+half carry" =
+    (* LD SP 0x00FF; LD HL SP+0x01 *)
+    let cpu, _ = create_cpu ~data:[ 0x31; 0xFF; 0x00; 0xF8; 0x01 ] ~size:0xFFFF () in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0xff PC:0x5 REG:A: 0x0 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x30 H: 0x1 L: 0x0 |}]
+
+let%expect_test "LD16 HL SP-0x01 carry+half carry" =
+    (* this produces carry and half carry because for this instruction the flags are calculated as if it was an unsigned addition not a subtraction *)
+    (* LD SP 0x00FF; LD HL SP-0x01 *)
+    let cpu, _ = create_cpu ~data:[ 0x31; 0xFF; 0x00; 0xF8; -1 ] ~size:0xFFFF () in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0xff PC:0x5 REG:A: 0x0 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x30 H: 0x0 L: 0xfe |}]
+
+let%expect_test "LD16 HL SP-0x01 no flags" =
+    (* LD SP 0x0100; LD HL SP-0x01 *)
+    let cpu, _ = create_cpu ~data:[ 0x31; 0x00; 0x01; 0xF8; -1 ] ~size:0xFFFF () in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x100 PC:0x5 REG:A: 0x0 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x0 H: 0x0 L: 0xff |}]
+
 let%expect_test "LD8 A B" =
     (* LD B 2; LD A B *)
     let cpu, _ = create_cpu ~data:[ 0x06; 0x02; 0x78 ] ~size:0xFFFF () in
@@ -274,6 +307,16 @@ let%expect_test "SUB half carry" =
     let _ = Cpu.step cpu in
     Cpu.show cpu |> print_endline;
     [%expect {| SP:0x0 PC:0x4 REG:A: 0xf B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x60 H: 0x0 L: 0x0 |}]
+
+let%expect_test "SBC carry+half carry" =
+    (*  ADD8 A 0x02; ADD8 A 0xFF; SUB A 1 *)
+    let cpu, _ = create_cpu ~data:[ 0xC6; 0x02; 0xC6; 0xFF; 0xDE; 0x01 ] ~size:0xFFFF () in
+
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x0 PC:0x6 REG:A: 0xff B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x70 H: 0x0 L: 0x0 |}]
 
 let%expect_test "BIT zero" =
     (* LD8 A 4; BIT A 1 *)

@@ -132,7 +132,9 @@ let main cpu ppu joypad timer texture renderer =
       let pc, instr = Cpu.get_pc cpu in
       (* if pc = 0xc012 then pause_emu (); *)
       (match instr with
-      | LD8 (Offset a, Reg8 A) when Uint.Uint8.to_int a = 0x07 -> pause_emu ()
+      (* | LD8 (Reg8 C, Imm8 a) when Uint.Uint8.to_int a = 0xF0 -> pause_emu () *)
+      (* | JP (None, Imm16 v) when Uint.Uint16.to_int v = 0xdefb -> pause_emu () *)
+      (* | LD16 (Reg16 HL, SP_offset e) when Uint.Int8.to_int e = -1 -> pause_emu () *)
       | _ -> ());
       (match !bp with
       | None -> ()
@@ -170,7 +172,7 @@ let () =
     let boot_rom =
         Bigstringaf.of_string ~off:0 ~len:(String.length boot_rom) boot_rom |> Cartridge.create
     in
-    let cartridge = In_channel.read_all "./test/resources/test_roms/cpu_instrs/individual/02.gb" in
+    let cartridge = In_channel.read_all "./test/resources/test_roms/cpu_instrs/individual/03.gb" in
     let cartridge =
         Bigstringaf.of_string ~off:0 ~len:(String.length cartridge) cartridge |> Cartridge.create
     in
