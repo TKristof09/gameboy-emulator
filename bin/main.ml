@@ -172,7 +172,7 @@ let () =
     let boot_rom =
         Bigstringaf.of_string ~off:0 ~len:(String.length boot_rom) boot_rom |> Cartridge.create
     in
-    let cartridge = In_channel.read_all "./test/resources/test_roms/cpu_instrs/individual/03.gb" in
+    let cartridge = In_channel.read_all "./test/resources/test_roms/cpu_instrs/individual/04.gb" in
     let cartridge =
         Bigstringaf.of_string ~off:0 ~len:(String.length cartridge) cartridge |> Cartridge.create
     in

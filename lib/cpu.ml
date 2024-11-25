@@ -159,14 +159,13 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
               write_arg x res;
               Nexti
           | ADC (x, y) ->
-              let open Uint8 in
-              let c = if Registers.read_flag cpu.registers Carry then one else zero in
+              let c = if Registers.read_flag cpu.registers Carry then Uint8.one else Uint8.zero in
               let vx, vy = (read_arg x, read_arg y) in
-              let vy = vy + c in
-              let res = vx + vy in
-              Registers.set_flags cpu.registers ~z:(res = zero)
-                ~c:(vx > Uint8.max_int - vy)
-                ~h:(logand vx (of_int 0xF) + logand vy (of_int 0xF) > of_int 0xF)
+              let res = Uint8.(vx + vy + c) in
+              let vx, vy, c = Uint8.(to_int vx, to_int vy, to_int c) in
+              Registers.set_flags cpu.registers ~z:(res = Uint8.zero)
+                ~c:(vx + vy + c > 0xFF)
+                ~h:((vx land 0xF) + (vy land 0xF) + c > 0xF)
                 ~s:false ();
               write_arg x res;
               Nexti
@@ -189,13 +188,13 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
               write_arg x res;
               Nexti
           | SBC (x, y) ->
-              let open Uint8 in
               let vx, vy = (read_arg x, read_arg y) in
-              let c = if Registers.read_flag cpu.registers Carry then one else zero in
-              let vy = vy + c in
-              let res = vx - vy in
-              Registers.set_flags cpu.registers ~z:(res = zero) ~c:(vx < vy)
-                ~h:(logand vx (of_int 0xF) < logand vy (of_int 0xF))
+              let c = if Registers.read_flag cpu.registers Carry then Uint8.one else Uint8.zero in
+              let res = Uint8.(vx - vy - c) in
+              let vx, vy, c = Uint8.(to_int vx, to_int vy, to_int c) in
+              Registers.set_flags cpu.registers ~z:(res = Uint8.zero)
+                ~c:(vx < vy + c)
+                ~h:(vx land 0xF < (vy land 0xF) + c)
                 ~s:true ();
               write_arg x res;
               Nexti
