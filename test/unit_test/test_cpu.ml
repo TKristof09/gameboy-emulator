@@ -481,6 +481,14 @@ let%expect_test "SLA A" =
     Cpu.show cpu |> print_endline;
     [%expect {| SP:0x0 PC:0x4 REG:A: 0x4 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x10 H: 0x0 L: 0x0 |}]
 
+let%expect_test "SRA A" =
+    (*  LD A 0b10000010; SRA A *)
+    let cpu, _ = create_cpu ~data:[ 0x3E; 0b10000010; 0xCB; 0x2F ] ~size:0xFFFF () in
+    let _ = Cpu.step cpu in
+    let _ = Cpu.step cpu in
+    Cpu.show cpu |> print_endline;
+    [%expect {| SP:0x0 PC:0x4 REG:A: 0xc1 B: 0x0 C: 0x0 D: 0x0 E: 0x0 F: 0x0 H: 0x0 L: 0x0 |}]
+
 let%expect_test "SRL A" =
     (*  LD A 0b10000011; SRL A *)
     let cpu, _ = create_cpu ~data:[ 0x3E; 0b10000011; 0xCB; 0x3F ] ~size:0xFFFF () in

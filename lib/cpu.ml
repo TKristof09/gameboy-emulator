@@ -318,6 +318,10 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
           | SCF ->
               Registers.set_flags cpu.registers ~c:true ~h:false ~s:false ();
               Nexti
+          | CCF ->
+              let c = Registers.read_flag cpu.registers Carry in
+              Registers.set_flags cpu.registers ~c:(not c) ~s:false ~h:false ();
+              Nexti
           | CPL ->
               let a = Registers.read_r8 cpu.registers A in
               Registers.write_r8 cpu.registers A (Uint8.lognot a);
@@ -348,6 +352,16 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
               let vx = read_arg x in
               let c = logand vx (of_int 0b10000000) <> zero in
               let res = shift_left vx 1 in
+              write_arg x res;
+              Registers.set_flags cpu.registers ~z:(res = zero) ~s:false ~h:false ~c ();
+              Nexti
+          | SRA x ->
+              let open Uint8 in
+              let vx = read_arg x in
+              let c = logand vx one <> zero in
+              let hi_bit = logand vx (of_int 0b10000000) in
+              (* for some reason bit 7 remains unchanged *)
+              let res = logor (shift_right_logical vx 1) hi_bit in
               write_arg x res;
               Registers.set_flags cpu.registers ~z:(res = zero) ~s:false ~h:false ~c ();
               Nexti
