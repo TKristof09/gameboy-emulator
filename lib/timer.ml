@@ -5,9 +5,10 @@ type frequency =
     | F_4
     | F_16
     | F_64
+[@@deriving show]
 
 type t = {
-    interrupt_manager : Interrupt_manager.t;
+    interrupt_manager : Interrupt_manager.t; [@opaque]
     mutable m_cycle_counter : int;
     mutable div : int;
     mutable tima_value : int;
@@ -15,6 +16,7 @@ type t = {
     mutable tima_freq : frequency;
     mutable tma : int;
   }
+[@@deriving show]
 
 let create interrupt_manager =
     {
@@ -29,19 +31,20 @@ let create interrupt_manager =
 
 let run t ~mcycles =
     let new_counter = t.m_cycle_counter + mcycles in
-    t.div <- t.div + ((new_counter / 64) - (t.m_cycle_counter / 64));
-    (if t.tima_enabled then
-       let freq =
-           match t.tima_freq with
-           | F_256 -> 256
-           | F_4 -> 4
-           | F_16 -> 16
-           | F_64 -> 64
-       in
-       let new_tima = t.tima_value + ((new_counter / freq) - (t.m_cycle_counter / freq)) in
-       if new_tima > 0xFF then (
-         t.tima_value <- t.tma;
-         Interrupt_manager.request_interrupt t.interrupt_manager Timer));
+    t.div <- t.div + (((new_counter / 64) - (t.m_cycle_counter / 64)) mod 256);
+    if t.tima_enabled then (
+      let freq =
+          match t.tima_freq with
+          | F_256 -> 256
+          | F_4 -> 4
+          | F_16 -> 16
+          | F_64 -> 64
+      in
+      let new_tima = t.tima_value + ((new_counter / freq) - (t.m_cycle_counter / freq)) in
+      t.tima_value <- new_tima;
+      if new_tima > 0xFF then (
+        t.tima_value <- t.tma;
+        Interrupt_manager.request_interrupt t.interrupt_manager Timer));
     (* 256 is divisible by all frequencies so we don't care about going higher *)
     t.m_cycle_counter <- new_counter mod 256
 

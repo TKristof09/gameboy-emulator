@@ -64,7 +64,6 @@ let is_enabled t interrupt_type =
 let set_master_enable t b = t.master_enabled <- b
 
 let get_pending t =
-    if t.joypad_enabled then Tsdl.Sdl.log "Joypad interrupt enabled\n";
     if not t.master_enabled then
       None
     else if t.vblank_enabled && t.vblank_requested then

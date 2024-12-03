@@ -130,9 +130,10 @@ let main cpu ppu joypad timer texture renderer =
       handle_events ();
       let c = Cpu.step cpu in
       let pc, instr = Cpu.get_pc cpu in
-      (* if pc = 0xc012 then pause_emu (); *)
+      (* if pc = 0xc350 then pause_emu (); *)
       (match instr with
-      (* | LD8 (Reg8 C, Imm8 a) when Uint.Uint8.to_int a = 0xF0 -> pause_emu () *)
+      (* | LD8 (Reg8 A, PtrImm16 a) when Uint.Uint16.to_int a = 0xFF0F -> pause_emu () *)
+      (* | AND (Reg8 A, Imm8 v) when Uint.Uint8.to_int v = 0x04 -> pause_emu () *)
       (* | JP (None, Imm16 v) when Uint.Uint16.to_int v = 0xdefb -> pause_emu () *)
       (* | LD16 (Reg16 HL, SP_offset e) when Uint.Int8.to_int e = -1 -> pause_emu () *)
       | _ -> ());
@@ -141,6 +142,8 @@ let main cpu ppu joypad timer texture renderer =
       | Some x -> if pc = x then pause_emu ());
       (* Printf.printf "PC: %#x  - %s: %s\n" pc (Instruction.show instr) (Cpu.show cpu); *)
       Timer.run timer ~mcycles:c;
+      (* Sdl.log "%s\n" (Timer.show timer); *)
+      (* Sdl.log "----------------------\n"; *)
       match Ppu.execute ppu ~mcycles:c with
       | In_progress -> step := false
       | Finished framebuffer ->
@@ -172,7 +175,7 @@ let () =
     let boot_rom =
         Bigstringaf.of_string ~off:0 ~len:(String.length boot_rom) boot_rom |> Cartridge.create
     in
-    let cartridge = In_channel.read_all "./test/resources/test_roms/cpu_instrs/individual/11.gb" in
+    let cartridge = In_channel.read_all "./test/resources/test_roms/cpu_instrs/individual/02.gb" in
     let cartridge =
         Bigstringaf.of_string ~off:0 ~len:(String.length cartridge) cartridge |> Cartridge.create
     in
