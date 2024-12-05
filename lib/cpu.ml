@@ -11,11 +11,12 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
       bus : Bus.t;
       interrupt_manager : Interrupt_manager.t;
       mutable enable_interrupt_nexti : bool;
+      mutable is_halted : bool;
     }
 
   let show cpu =
       (* TODO: just to shut up the compiler *)
-      Printf.sprintf "SP:%s PC:%s REG:%s" (Uint16.to_string_hex cpu.sp)
+      Printf.sprintf "HALT:%b SP:%s PC:%s REG:%s" cpu.is_halted (Uint16.to_string_hex cpu.sp)
         (Uint16.to_string_hex cpu.pc) (Registers.show cpu.registers)
 
   let create ~bus ~interrupt_manager =
@@ -26,6 +27,7 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
         bus;
         interrupt_manager;
         enable_interrupt_nexti = false;
+        is_halted = false;
       }
 
   let skip_boot_rom cpu =
@@ -468,6 +470,9 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
               Registers.set_flags cpu.registers ~z:(res = zero) ~h:false ~c:should_carry ();
               Registers.write_r8 cpu.registers A res;
               Nexti
+          | HALT ->
+              cpu.is_halted <- true;
+              Nexti
           | _ ->
               failwith (Printf.sprintf "%s:%s" "Unimplemented instruction" (Instruction.show instr))
       in
@@ -477,6 +482,13 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
       | Jump i ->
           cpu.pc <- i;
           mcycles_branch
+
+  let execute_instruction cpu (instr_info : Instruction_info.t) =
+      if cpu.enable_interrupt_nexti then (
+        Interrupt_manager.set_master_enable cpu.interrupt_manager true;
+        cpu.enable_interrupt_nexti <- false);
+      execute cpu instr_info.instr instr_info.len instr_info.mcycles_branch
+        instr_info.mcycles_nobranch
 
   let handle_interrupt cpu (int : Interrupt_manager.interrupt_type) =
       Tsdl.Sdl.log "Handling interrupt %s\n" (Interrupt_manager.show_interrupt_type int);
@@ -499,12 +511,14 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
       (* Tsdl.Sdl.log "PC: %s -- %s\n" (Uint16.to_string_hex cpu.pc) (Instruction.show info.instr); *)
       (* Tsdl.Sdl.log "-----------------"; *)
       match Interrupt_manager.get_pending cpu.interrupt_manager with
-      | None ->
-          if cpu.enable_interrupt_nexti then (
-            Interrupt_manager.set_master_enable cpu.interrupt_manager true;
-            cpu.enable_interrupt_nexti <- false);
-          execute cpu info.instr info.len info.mcycles_branch info.mcycles_nobranch
-      | Some int -> handle_interrupt cpu int
+      | None when not cpu.is_halted -> execute_instruction cpu info
+      | None (* when cpu.is_halted *) -> 1
+      | Some int ->
+          cpu.is_halted <- false;
+          if Interrupt_manager.is_master_enabled cpu.interrupt_manager then
+            handle_interrupt cpu int
+          else
+            execute_instruction cpu info
 
   let get_pc cpu = (Uint16.to_int cpu.pc, (Instruction_fetcher.fetch cpu.bus ~pc:cpu.pc).instr)
 end

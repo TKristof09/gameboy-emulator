@@ -62,11 +62,10 @@ let is_enabled t interrupt_type =
     | Joypad -> t.master_enabled && t.joypad_enabled
 
 let set_master_enable t b = t.master_enabled <- b
+let is_master_enabled t = t.master_enabled
 
 let get_pending t =
-    if not t.master_enabled then
-      None
-    else if t.vblank_enabled && t.vblank_requested then
+    if t.vblank_enabled && t.vblank_requested then
       Some VBlank
     else if t.lcd_enabled && t.lcd_requested then
       Some LCD
