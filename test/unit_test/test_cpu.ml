@@ -146,7 +146,7 @@ let%expect_test "CALL 0x0042" =
     (* LD SP 0x0010; CALL None 0x0042 *)
     let cpu, _, _ = create_cpu ~data:[ 0x31; 0x10; 0x00; 0xCD; 0x42; 0x00 ] ~size:0xFFFF () in
     let _ = Cpu.step cpu in
-    let c = Cpu.step cpu in
+    let c, _, _ = Cpu.step cpu in
     Cpu.show cpu |> print_endline;
     Printf.printf "%d\n" c;
     [%expect
@@ -171,7 +171,7 @@ let%expect_test "JR None" =
     (* JR None 0x42 *)
     let cpu, _, _ = create_cpu ~data:[ 0x18; 0x42 ] ~size:0xFFFF () in
 
-    let c = Cpu.step cpu in
+    let c, _, _ = Cpu.step cpu in
     Cpu.show cpu |> print_endline;
     Printf.printf "%d\n" c;
     [%expect
@@ -184,7 +184,7 @@ let%expect_test "JR NZ" =
     (* JR NZ 0x42 *)
     let cpu, _, _ = create_cpu ~data:[ 0x20; 0x42 ] ~size:0xFFFF () in
 
-    let c = Cpu.step cpu in
+    let c, _, _ = Cpu.step cpu in
     Cpu.show cpu |> print_endline;
     Printf.printf "%d\n" c;
     [%expect
@@ -198,7 +198,7 @@ let%expect_test "JR Z" =
     let cpu, _, _ = create_cpu ~data:[ 0x87; 0x28; 0x42 ] ~size:0xFFFF () in
 
     let _ = Cpu.step cpu in
-    let c = Cpu.step cpu in
+    let c, _, _ = Cpu.step cpu in
     Cpu.show cpu |> print_endline;
     Printf.printf "%d\n" c;
     [%expect
@@ -211,7 +211,7 @@ let%expect_test "JR NC" =
     (*  JR NC 0x42 *)
     let cpu, _, _ = create_cpu ~data:[ 0x30; 0x42 ] ~size:0xFFFF () in
 
-    let c = Cpu.step cpu in
+    let c, _, _ = Cpu.step cpu in
     Cpu.show cpu |> print_endline;
     Printf.printf "%d\n" c;
     [%expect
@@ -226,7 +226,7 @@ let%expect_test "JR C" =
 
     let _ = Cpu.step cpu in
     let _ = Cpu.step cpu in
-    let c = Cpu.step cpu in
+    let c, _, _ = Cpu.step cpu in
     Cpu.show cpu |> print_endline;
     Printf.printf "%d\n" c;
     [%expect
@@ -241,7 +241,7 @@ let%expect_test "JP None" =
 
     let _ = Cpu.step cpu in
     let _ = Cpu.step cpu in
-    let c = Cpu.step cpu in
+    let c, _, _ = Cpu.step cpu in
     Cpu.show cpu |> print_endline;
     Printf.printf "%d\n" c;
     [%expect

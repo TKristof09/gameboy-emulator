@@ -112,6 +112,6 @@ let%expect_test "div reset on write" =
         tima_value = 0; tima_enabled = false; tima_freq = Timer.F_256; tma = 0 }
       { Timer.interrupt_manager = <opaque>; m_cycle_counter = 64; div = 1;
         tima_value = 0; tima_enabled = false; tima_freq = Timer.F_256; tma = 0 }
-      { Timer.interrupt_manager = <opaque>; m_cycle_counter = 64; div = 0;
+      { Timer.interrupt_manager = <opaque>; m_cycle_counter = 0; div = 0;
         tima_value = 0; tima_enabled = false; tima_freq = Timer.F_256; tma = 0 }
       |}]

@@ -71,7 +71,10 @@ let read_byte t addr =
 
 let write_byte t ~addr ~data =
     match Uint16.to_int addr with
-    | 0xFF04 -> t.div <- 0
+    | 0xFF04 ->
+        t.div <- 0;
+        (* according to mooneye test this also resets the cycle counter as the cycle counter hardware uses the div to count *)
+        t.m_cycle_counter <- 0
     | 0xFF05 -> t.tima_value <- Uint8.to_int data
     | 0xFF06 -> t.tma <- Uint8.to_int data
     | 0xFF07 ->

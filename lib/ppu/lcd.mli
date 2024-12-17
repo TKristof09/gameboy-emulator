@@ -1,6 +1,6 @@
 type t
 
-val create : unit -> t
+val create : Interrupt_manager.t -> t
 val show : t -> string
 val show_mode : [ `HBlank | `VBlank | `OAM_search | `Drawing ] -> string
 val set_mode : t -> [ `HBlank | `VBlank | `OAM_search | `Drawing ] -> unit

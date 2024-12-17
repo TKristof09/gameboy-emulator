@@ -1,15 +1,16 @@
 (executable
  (public_name gameboy)
  (name main)
+ (ocamlopt_flags -O3 -g -inlining-report)
  (libraries gameboy tsdl tsdl-ttf)
  (flags
   (:standard -w -21))
  (modes
-  (native exe))
- (instrumentation
-  (backend landmarks)))
+  (native exe)))
+ ; (instrumentation
+ ;  (backend landmarks)))
 
 (env
  (release
   (ocamlopt_flags
-   (:standard -O3))))
+   (:standard -O3 -g))))

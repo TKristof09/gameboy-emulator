@@ -1,10 +1,11 @@
 (library
  (name gameboy)
  (libraries stdint core bigstringaf tsdl)
+ (ocamlopt_flags -O3 -g -inlining-report)
  (preprocess
-  (pps ppx_deriving.show))
- (instrumentation
-  (backend landmarks)))
+  (pps ppx_deriving.show)))
+ ; (instrumentation
+ ;  (backend landmarks)))
 
 (env
  (release

@@ -48,14 +48,15 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
       | Nexti
       | Jump of uint16
 
+  let two = Uint16.of_int 2
+
   let push_stack cpu data =
-      let open Uint16 in
-      cpu.sp <- cpu.sp - of_int 2;
+      cpu.sp <- Uint16.(cpu.sp - two);
       Bus.write_word cpu.bus ~addr:cpu.sp ~data
 
   let pop_stack cpu =
       let res = Bus.read_word cpu.bus cpu.sp in
-      cpu.sp <- Uint16.(cpu.sp + of_int 2);
+      cpu.sp <- Uint16.(cpu.sp + two);
       res
 
   let execute cpu instr instr_len mcycles_branch mcycles_nobranch =
@@ -510,15 +511,16 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
       (* Tsdl.Sdl.log "%s\n" (show cpu); *)
       (* Tsdl.Sdl.log "PC: %s -- %s\n" (Uint16.to_string_hex cpu.pc) (Instruction.show info.instr); *)
       (* Tsdl.Sdl.log "-----------------"; *)
+      let instr = info.instr in
       match Interrupt_manager.get_pending cpu.interrupt_manager with
-      | None when not cpu.is_halted -> execute_instruction cpu info
-      | None (* when cpu.is_halted *) -> 1
+      | None when not cpu.is_halted -> (execute_instruction cpu info, instr, Uint16.to_int cpu.pc)
+      | None (* when cpu.is_halted *) -> (1, instr, Uint16.to_int cpu.pc)
       | Some int ->
           cpu.is_halted <- false;
           if Interrupt_manager.is_master_enabled cpu.interrupt_manager then
-            handle_interrupt cpu int
+            (handle_interrupt cpu int, instr, Uint16.to_int cpu.pc)
           else
-            execute_instruction cpu info
+            (execute_instruction cpu info, instr, Uint16.to_int cpu.pc)
 
   let get_pc cpu = (Uint16.to_int cpu.pc, (Instruction_fetcher.fetch cpu.bus ~pc:cpu.pc).instr)
 end

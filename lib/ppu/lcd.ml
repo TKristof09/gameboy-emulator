@@ -31,10 +31,11 @@ type stat = {
 type t = {
     control : control;
     stat : stat;
+    interrupt_manager : Interrupt_manager.t; [@opaque]
   }
 [@@deriving show]
 
-let create () =
+let create interrupt_manager =
     {
       control =
         {
@@ -62,9 +63,24 @@ let create () =
           winx = Uint8.zero;
           winy = Uint8.zero;
         };
+      interrupt_manager;
     }
 
-let set_mode t mode = t.stat.ppu_mode <- mode
+let set_mode t mode =
+    t.stat.ppu_mode <- mode;
+    match mode with
+    | `HBlank ->
+        if t.stat.mode_0_interupt_enable then
+          Interrupt_manager.request_interrupt t.interrupt_manager LCD
+    | `VBlank ->
+        Interrupt_manager.request_interrupt t.interrupt_manager VBlank;
+        if t.stat.mode_1_interupt_enable then
+          Interrupt_manager.request_interrupt t.interrupt_manager LCD
+    | `OAM_search ->
+        if t.stat.mode_2_interupt_enable then
+          Interrupt_manager.request_interrupt t.interrupt_manager LCD
+    | `Drawing -> ()
+
 let get_mode t = t.stat.ppu_mode
 
 let show_mode m =
@@ -76,11 +92,17 @@ let show_mode m =
 
 let incr_ly t =
     t.stat.ly <- t.stat.ly + 1;
-    t.stat.ly_eq_lyc_flag <- t.stat.ly = t.stat.lyc
+    let is_eq = t.stat.ly = t.stat.lyc in
+    t.stat.ly_eq_lyc_flag <- is_eq;
+    if is_eq && t.stat.ly_eq_lyc_interupt_enable then
+      Interrupt_manager.request_interrupt t.interrupt_manager LCD
 
 let reset_ly t =
     t.stat.ly <- 0;
-    t.stat.ly_eq_lyc_flag <- t.stat.ly = t.stat.lyc
+    let is_eq = t.stat.ly = t.stat.lyc in
+    t.stat.ly_eq_lyc_flag <- is_eq;
+    if is_eq && t.stat.ly_eq_lyc_interupt_enable then
+      Interrupt_manager.request_interrupt t.interrupt_manager LCD
 
 let get_ly t = t.stat.ly
 let set_ly_eq_lyc t b = t.stat.ly_eq_lyc_flag <- b
@@ -125,6 +147,7 @@ let read_stat stat =
     lor (Bool.to_int stat.mode_1_interupt_enable lsl 4)
     lor (Bool.to_int stat.mode_2_interupt_enable lsl 5)
     lor (Bool.to_int stat.ly_eq_lyc_interupt_enable lsl 6)
+    lor 0b1000000
     |> Uint8.of_int
 
 let write_control control data =
@@ -170,7 +193,17 @@ let read_byte t addr =
 
 let write_byte t ~addr ~data =
     match Uint16.to_int addr with
-    | addr_int when addr_int = 0xFF40 -> write_control t.control data
+    | addr_int when addr_int = 0xFF40 ->
+        let old = t.control.lcd_ppu_enable in
+        write_control t.control data;
+        if old && not t.control.lcd_ppu_enable then (
+          (* It is forbidden by nintendo to disable lcd outside of VBlank so I just check it because it would mean something wrong with my emulator *)
+          if not (t.stat.ppu_mode = `VBlank) then (
+            Tsdl.Sdl.log "%s\n" (show_mode t.stat.ppu_mode);
+            assert false);
+          (* when lcd is turned off mode is set to HBlank and LY to 0 *)
+          t.stat.ppu_mode <- `HBlank;
+          t.stat.ly <- 0)
     | addr_int when addr_int = 0xFF41 -> write_stat t.stat data
     | addr_int when addr_int = 0xFF42 -> t.stat.scy <- data
     | addr_int when addr_int = 0xFF43 -> t.stat.scx <- data

@@ -9,7 +9,6 @@ type t = {
     tile_map : Tile_map.t;
     oam : Oam.t;
     lcd : Lcd.t;
-    interrupt_manager : Interrupt_manager.t;
     mutable mcycles_in_current_mode : int;
     framebuffer : Color.t array array;
   }
@@ -17,6 +16,7 @@ type t = {
 type frame_progress =
     | In_progress
     | Finished of Color.t array array
+    | Off
 
 let create interrupt_manager =
     {
@@ -26,8 +26,7 @@ let create interrupt_manager =
       tiles = Tile_data.create ();
       tile_map = Tile_map.create ();
       oam = Oam.create ();
-      lcd = Lcd.create ();
-      interrupt_manager;
+      lcd = Lcd.create interrupt_manager;
       mcycles_in_current_mode = 0;
       framebuffer = Array.make_matrix ~dimx:160 ~dimy:144 Color.White;
     }
@@ -128,7 +127,7 @@ let render_objects t ly =
              Seq.init 8 (fun x -> x)
              |> Seq.iter (fun x ->
                     let lx = x + Uint8.to_int o.x in
-                    if lx > 0 && lx <= 160 then
+                    if lx >= 0 && lx < 160 then
                       let color_id =
                           Tile_data.get_pixel_color_id t.tiles Mode_8000 o.tile_index
                             ~x:(if o.x_flip then 7 - x else x)
@@ -137,6 +136,7 @@ let render_objects t ly =
                       match color_id with
                       | ID_0 -> ()
                       | _ -> (
+                          (* Tsdl.Sdl.log "X:%d   Y:%d" lx ly; *)
                           match (o.priority, t.framebuffer.(lx).(ly)) with
                           | `OBJ_prio, _
                           | _, White ->
@@ -155,9 +155,8 @@ let execute t ~mcycles =
           if t.mcycles_in_current_mode >= hblank_cycles then (
             t.mcycles_in_current_mode <- t.mcycles_in_current_mode mod hblank_cycles;
             Lcd.incr_ly t.lcd;
-            if Lcd.get_ly t.lcd = 144 then (
-              Lcd.set_mode t.lcd `VBlank;
-              Interrupt_manager.request_interrupt t.interrupt_manager VBlank)
+            if Lcd.get_ly t.lcd = 144 then
+              Lcd.set_mode t.lcd `VBlank
             else
               Lcd.set_mode t.lcd `OAM_search);
           In_progress
@@ -187,4 +186,4 @@ let execute t ~mcycles =
           else
             In_progress
     else
-      In_progress
+      Off

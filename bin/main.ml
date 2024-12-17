@@ -7,7 +7,7 @@ open Tsdl_ttf
 let orig_width, orig_height = (160, 144)
 let scale = 4
 let scaled_width, scaled_height = (scale * orig_width, scale * orig_height)
-let target_frame_time = Time_ns.Span.of_int_ms 16
+(* let target_frame_time = Time_ns.Span.of_int_ms 16 *)
 
 let sdl_check = function
     | Error (`Msg e) ->
@@ -125,17 +125,20 @@ let main cpu ppu joypad timer texture renderer =
         handle_events ();
         render_text renderer "--PAUSED--" ~x:0 ~y:10;
         Out_channel.flush Out_channel.stdout;
-        Sdl.delay 16l
+        Sdl.delay 16l (* 16ms *)
       done;
-      handle_events ();
-      let c = Cpu.step cpu in
-      let pc, instr = Cpu.get_pc cpu in
-      (* if pc = 0xc350 then pause_emu (); *)
+      (* handle_events (); *)
+      let c, instr, pc = Cpu.step cpu in
+      (* if pc = 0xb7b then pause_emu (); *)
+      (* if pc = 0x2250 then pause_emu (); *)
+      step := false;
       (match instr with
       (* | LD8 (Reg8 A, PtrImm16 a) when Uint.Uint16.to_int a = 0xFF0F -> pause_emu () *)
       (* | AND (Reg8 A, Imm8 v) when Uint.Uint8.to_int v = 0x04 -> pause_emu () *)
       (* | JP (None, Imm16 v) when Uint.Uint16.to_int v = 0xdefb -> pause_emu () *)
       (* | LD16 (Reg16 HL, SP_offset e) when Uint.Int8.to_int e = -1 -> pause_emu () *)
+      (* | LD8 (Offset a, _) when Uint.Uint8.to_int a = 0x40 -> pause_emu () *)
+      (* | LD8 (Reg8 B, Reg8 B) -> pause_emu () *)
       | _ -> ());
       (match !bp with
       | None -> ()
@@ -146,27 +149,32 @@ let main cpu ppu joypad timer texture renderer =
       (* Sdl.log "----------------------\n"; *)
       match Ppu.execute ppu ~mcycles:c with
       | In_progress -> step := false
+      | Off -> handle_events ()
       | Finished framebuffer ->
+          handle_events ();
           render_framebuffer renderer texture framebuffer;
           (* render_text renderer *)
           (*   (Printf.sprintf "PC: %#x  - %s" pc (Instruction.show instr)) *)
           (*   ~x:0 ~y:20; *)
-          let open Time_ns.Span in
-          let duration = Time_ns.diff (Time_ns.now ()) !start_time in
-          if duration < target_frame_time then
-            Int32.of_int_exn (to_int_ms (target_frame_time - duration)) |> Sdl.delay;
+          (* let open Time_ns.Span in *)
+          (* let duration = Time_ns.diff (Time_ns.now ()) !start_time in *)
+          (* if duration < target_frame_time then *)
+          (*   Int32.of_int_exn (to_int_ms (target_frame_time - duration)) |> Sdl.delay; *)
           let open Int in
           fps := !fps + Time_ns.Span.to_int_ms (Time_ns.diff (Time_ns.now ()) !start_time);
+          incr i;
+
+          render_text renderer
+            (Printf.sprintf "FPS: %.0f" (Int.to_float !i *. 1000.0 /. Int.to_float !fps))
+            (* (Printf.sprintf "Frametime: %d ms" (!fps / !i)) *)
+            ~x:0 ~y:40;
+
           if !i = 10 then (
-            render_text renderer
-              (Printf.sprintf "FPS: %.0f" (10000.0 /. Int.to_float !fps))
-              ~x:0 ~y:40;
             i := 0;
             fps := 0);
           start_time := Time_ns.now ();
           Sdl.render_present renderer;
-          step := false;
-          incr i
+          step := false
     done
 
 let () =
@@ -175,11 +183,12 @@ let () =
     let boot_rom =
         Bigstringaf.of_string ~off:0 ~len:(String.length boot_rom) boot_rom |> Cartridge.create
     in
-    let cartridge = In_channel.read_all "./test/resources/test_roms/cpu_instrs/cpu_instrs.gb" in
-    (* let cartridge = In_channel.read_all "roms/tetris.gb" in *)
+    (* let cartridge = In_channel.read_all "./test/resources/test_roms/instr_timing/instr_timing.gb" in *)
+    let cartridge = In_channel.read_all "roms/DrMario.gb" in
     let cartridge =
         Bigstringaf.of_string ~off:0 ~len:(String.length cartridge) cartridge |> Cartridge.create
     in
+    Tsdl.Sdl.log "%s\n" (Cartridge.show cartridge);
     let open Gameboy.Uint in
     let wram = Ram.create ~start_addr:(Uint16.of_int 0xC000) ~end_addr:(Uint16.of_int 0xDFFF) in
     let hram = Ram.create ~start_addr:(Uint16.of_int 0xFF80) ~end_addr:(Uint16.of_int 0xFFFE) in
@@ -189,8 +198,12 @@ let () =
     let timer = Timer.create interrupt_manager in
     let bus = Bus.create ~ppu ~wram ~hram ~boot_rom ~cartridge ~interrupt_manager ~joypad ~timer in
     let cpu = Cpu.create ~bus ~interrupt_manager in
-    Cpu.skip_boot_rom cpu;
 
+    (*
+    TODO: PPU state isn't set upcorrectly when skipping bootrom
+    Mode needs to be VBLank and perhaps other stuff, need to check
+    *)
+    (* Cpu.skip_boot_rom cpu; *)
     Sdl.init Sdl.Init.(video + events) |> sdl_check;
     let win, renderer =
         Sdl.create_window_and_renderer ~w:scaled_width ~h:scaled_height Sdl.Window.windowed

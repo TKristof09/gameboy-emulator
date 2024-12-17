@@ -33,6 +33,9 @@ let read_byte t addr =
         Cartridge.read_byte t.boot_rom addr
     | addr_int when 0x0000 <= addr_int && addr_int <= 0x7FFF -> Cartridge.read_byte t.cartridge addr
     | addr_int when 0xC000 <= addr_int && addr_int <= 0xDFFF -> Ram.read_byte t.wram addr
+    | addr_int when 0xE000 <= addr_int && addr_int <= 0xFDFF ->
+        let addr = addr_int - 0xE000 + 0xC000 |> Uint16.of_int in
+        Ram.read_byte t.wram addr
     | addr_int when 0xFF80 <= addr_int && addr_int <= 0xFFFE -> Ram.read_byte t.hram addr
     | _ when Ppu.accepts_address addr -> Ppu.read_byte t.ppu addr
     | 0xFF50 -> Uint8.of_int (Bool.to_int t.is_boot_rom_disabled)
@@ -43,6 +46,7 @@ let read_byte t addr =
     (* illegal addresses return 0 according to some sources and FF according to others so idk *)
     | addr_int when 0xFEA0 <= addr_int && addr_int <= 0xFEFF -> Uint8.of_int 0x00
     | 0xFF00 -> Joypad.read_byte t.joypad addr
+    | 0xFF02 -> Uint8.max_int
     | addr_int when 0xFF04 <= addr_int && addr_int <= 0xFF07 -> Timer.read_byte t.timer addr
     | 0xFF4D -> Uint8.max_int (* speed switch, gcb only functionality *)
     | _ ->
@@ -53,6 +57,9 @@ let write_byte t ~addr ~data =
     | addr_int when 0x0000 <= addr_int && addr_int <= 0x7FFF ->
         Cartridge.write_byte t.cartridge ~addr ~data
     | addr_int when 0xC000 <= addr_int && addr_int <= 0xDFFF -> Ram.write_byte t.wram ~addr ~data
+    | addr_int when 0xE000 <= addr_int && addr_int <= 0xFDFF ->
+        let addr = addr_int - 0xE000 + 0xC000 |> Uint16.of_int in
+        Ram.write_byte t.wram ~addr ~data
     | addr_int when 0xFF80 <= addr_int && addr_int <= 0xFFFE -> Ram.write_byte t.hram ~addr ~data
     | _ when Ppu.accepts_address addr -> Ppu.write_byte t.ppu ~addr ~data
     | 0xFF50 -> t.is_boot_rom_disabled <- Uint8.(data <> zero)
@@ -71,7 +78,8 @@ let write_byte t ~addr ~data =
         ()
     | 0xFF00 -> Joypad.write_byte t.joypad ~addr ~data
     | addr_int when 0xFF04 <= addr_int && addr_int <= 0xFF07 -> Timer.write_byte t.timer ~addr ~data
-    | _ -> Tsdl.Sdl.log "Unhandled memory location write %s\n" (Uint16.to_string_hex addr)
+    | addr_int when 0xFF10 <= addr_int && addr_int <= 0xFF26 -> () (* sound stuff *)
+    | _ -> (* Tsdl.Sdl.log "Unhandled memory location write %s\n" (Uint16.to_string_hex addr) *) ()
 
 let read_word t addr =
     let lo = read_byte t addr in
