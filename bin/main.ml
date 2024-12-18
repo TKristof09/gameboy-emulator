@@ -129,8 +129,7 @@ let main cpu ppu joypad timer texture renderer =
       done;
       (* handle_events (); *)
       let c, instr, pc = Cpu.step cpu in
-      (* if pc = 0xb7b then pause_emu (); *)
-      (* if pc = 0x2250 then pause_emu (); *)
+      if pc = 0x38 then pause_emu ();
       step := false;
       (match instr with
       (* | LD8 (Reg8 A, PtrImm16 a) when Uint.Uint16.to_int a = 0xFF0F -> pause_emu () *)
@@ -138,7 +137,7 @@ let main cpu ppu joypad timer texture renderer =
       (* | JP (None, Imm16 v) when Uint.Uint16.to_int v = 0xdefb -> pause_emu () *)
       (* | LD16 (Reg16 HL, SP_offset e) when Uint.Int8.to_int e = -1 -> pause_emu () *)
       (* | LD8 (Offset a, _) when Uint.Uint8.to_int a = 0x40 -> pause_emu () *)
-      (* | LD8 (Reg8 B, Reg8 B) -> pause_emu () *)
+      | LD8 (Reg8 B, Reg8 B) -> pause_emu ()
       | _ -> ());
       (match !bp with
       | None -> ()
@@ -183,8 +182,10 @@ let () =
     let boot_rom =
         Bigstringaf.of_string ~off:0 ~len:(String.length boot_rom) boot_rom |> Cartridge.create
     in
-    (* let cartridge = In_channel.read_all "./test/resources/test_roms/instr_timing/instr_timing.gb" in *)
-    let cartridge = In_channel.read_all "roms/DrMario.gb" in
+    let cartridge =
+        In_channel.read_all "./test/resources/mooneye/emulator-only/mbc1/bits_bank1.gb"
+    in
+    (* let cartridge = In_channel.read_all "roms/DrMario.gb" in *)
     let cartridge =
         Bigstringaf.of_string ~off:0 ~len:(String.length cartridge) cartridge |> Cartridge.create
     in
@@ -203,7 +204,7 @@ let () =
     TODO: PPU state isn't set upcorrectly when skipping bootrom
     Mode needs to be VBLank and perhaps other stuff, need to check
     *)
-    (* Cpu.skip_boot_rom cpu; *)
+    Cpu.skip_boot_rom cpu;
     Sdl.init Sdl.Init.(video + events) |> sdl_check;
     let win, renderer =
         Sdl.create_window_and_renderer ~w:scaled_width ~h:scaled_height Sdl.Window.windowed

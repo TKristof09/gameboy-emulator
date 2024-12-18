@@ -139,7 +139,7 @@ let show instr =
     | BIT (n, x) -> Printf.sprintf "BIT %d, %s" n (show_arg x)
     | RES (n, x) -> Printf.sprintf "RES %d, %s" n (show_arg x)
     | SET (n, x) -> Printf.sprintf "SET %d, %s" n (show_arg x)
-    | CALL (c, x) -> Printf.sprintf "CALL %s, %s" (show_condition c) (Uint16.to_string x)
+    | CALL (c, x) -> Printf.sprintf "CALL %s, %s" (show_condition c) (Uint16.to_string_hex x)
     | JP (c, x) -> Printf.sprintf "JP %s, %s" (show_condition c) (show_arg x)
     | JR (c, x) -> Printf.sprintf "JR %s, %s" (show_condition c) (Int8.to_string_hex x)
     | RET c -> Printf.sprintf "RET %s" (show_condition c)
