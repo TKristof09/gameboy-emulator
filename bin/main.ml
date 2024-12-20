@@ -129,15 +129,12 @@ let main cpu ppu joypad timer texture renderer =
       done;
       (* handle_events (); *)
       let c, instr, pc = Cpu.step cpu in
-      if pc = 0x38 then pause_emu ();
+      (* if pc = 0x16e then pause_emu (); *)
       step := false;
       (match instr with
-      (* | LD8 (Reg8 A, PtrImm16 a) when Uint.Uint16.to_int a = 0xFF0F -> pause_emu () *)
-      (* | AND (Reg8 A, Imm8 v) when Uint.Uint8.to_int v = 0x04 -> pause_emu () *)
-      (* | JP (None, Imm16 v) when Uint.Uint16.to_int v = 0xdefb -> pause_emu () *)
-      (* | LD16 (Reg16 HL, SP_offset e) when Uint.Int8.to_int e = -1 -> pause_emu () *)
-      (* | LD8 (Offset a, _) when Uint.Uint8.to_int a = 0x40 -> pause_emu () *)
-      | LD8 (Reg8 B, Reg8 B) -> pause_emu ()
+      (* | LD8 (Reg8 D, Imm8 v) when Uint.Uint8.to_int v = 0x42 -> pause_emu () *)
+      (* | RET Z -> pause_emu () *)
+      (* | LD8 (Reg8 B, Reg8 B) -> pause_emu () *)
       | _ -> ());
       (match !bp with
       | None -> ()
@@ -183,8 +180,21 @@ let () =
         Bigstringaf.of_string ~off:0 ~len:(String.length boot_rom) boot_rom |> Cartridge.create
     in
     let cartridge =
-        In_channel.read_all "./test/resources/mooneye/emulator-only/mbc1/bits_bank1.gb"
+        (* In_channel.read_all "./test/resources/mooneye/emulator-only/mbc1/bits_bank1.gb" *)
+        (* In_channel.read_all "./test/resources/mooneye/emulator-only/mbc1/bits_bank2.gb" *)
+        (* In_channel.read_all "./test/resources/mooneye/emulator-only/mbc1/bits_mode.gb" *)
+        (* In_channel.read_all "./test/resources/mooneye/emulator-only/mbc1/bits_ramg.gb" *)
+        (* In_channel.read_all "./test/resources/mooneye/emulator-only/mbc1/multicart_rom_8Mb.gb" *)
+        (* In_channel.read_all "./test/resources/mooneye/emulator-only/mbc1/ram_64kb.gb" *)
+        (* In_channel.read_all "./test/resources/mooneye/emulator-only/mbc1/ram_256kb.gb" *)
+        (* In_channel.read_all "./test/resources/mooneye/emulator-only/mbc1/rom_1Mb.gb" *)
+        (* In_channel.read_all "./test/resources/mooneye/emulator-only/mbc1/rom_2Mb.gb" *)
+        (* In_channel.read_all "./test/resources/mooneye/emulator-only/mbc1/rom_4Mb.gb" *)
+        (* In_channel.read_all "./test/resources/mooneye/emulator-only/mbc1/rom_8Mb.gb" *)
+        (* In_channel.read_all "./test/resources/mooneye/emulator-only/mbc1/rom_16Mb.gb" *)
+        In_channel.read_all "./test/resources/mooneye/emulator-only/mbc1/rom_512kb.gb"
     in
+
     (* let cartridge = In_channel.read_all "roms/DrMario.gb" in *)
     let cartridge =
         Bigstringaf.of_string ~off:0 ~len:(String.length cartridge) cartridge |> Cartridge.create

@@ -2,6 +2,7 @@ module type S = sig
   type t
 
   val create : Bigstringaf.t -> Cartridge_header.t -> t
+  val accepts_address : int -> bool
 
   include Addressable_intf.ByteAddressable with type t := t
 end

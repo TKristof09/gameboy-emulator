@@ -31,7 +31,8 @@ let read_byte t addr =
     match Uint16.to_int addr with
     | addr_int when (not t.is_boot_rom_disabled) && 0x0000 <= addr_int && addr_int <= 0x00FF ->
         Cartridge.read_byte t.boot_rom addr
-    | addr_int when 0x0000 <= addr_int && addr_int <= 0x7FFF -> Cartridge.read_byte t.cartridge addr
+    | addr_int when Cartridge.accepts_address t.cartridge addr_int ->
+        Cartridge.read_byte t.cartridge addr
     | addr_int when 0xC000 <= addr_int && addr_int <= 0xDFFF -> Ram.read_byte t.wram addr
     | addr_int when 0xE000 <= addr_int && addr_int <= 0xFDFF ->
         let addr = addr_int - 0xE000 + 0xC000 |> Uint16.of_int in
@@ -54,7 +55,7 @@ let read_byte t addr =
 
 let write_byte t ~addr ~data =
     match Uint16.to_int addr with
-    | addr_int when 0x0000 <= addr_int && addr_int <= 0x7FFF ->
+    | addr_int when Cartridge.accepts_address t.cartridge addr_int ->
         Cartridge.write_byte t.cartridge ~addr ~data
     | addr_int when 0xC000 <= addr_int && addr_int <= 0xDFFF -> Ram.write_byte t.wram ~addr ~data
     | addr_int when 0xE000 <= addr_int && addr_int <= 0xFDFF ->

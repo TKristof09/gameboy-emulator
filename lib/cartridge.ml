@@ -20,3 +20,7 @@ let read_byte t addr =
 let write_byte t ~addr ~data =
     let module M = (val t.impl : Cartridge_intf.Instance) in
     M.Cartridge_type.write_byte M.this ~addr ~data
+
+let accepts_address t addr_int =
+    let module M = (val t.impl : Cartridge_intf.Instance) in
+    M.Cartridge_type.accepts_address addr_int

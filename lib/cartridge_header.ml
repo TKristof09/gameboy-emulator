@@ -16,7 +16,10 @@ let parse_header bytes =
     let ctype =
         match Bigstringaf.unsafe_get bytes 0x0147 |> Char.to_int with
         | 0x00 -> ROM_ONLY
-        | 0x01 -> MBC1
+        | 0x01
+        | 0x02
+        | 0x03 ->
+            MBC1
         | x -> failwith @@ Printf.sprintf "Unsupported ROM type %d" x
     in
     let rom_size = 2 lsl (Bigstringaf.unsafe_get bytes 0x0148 |> Char.to_int) in

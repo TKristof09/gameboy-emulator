@@ -243,28 +243,28 @@ let%expect_test "test fetch all" =
       0xc1 Len: 1 Instr: POP BC Branch: 3 Nobranch: 3
       0xc2 Len: 3 Instr: JP NZ, 0x1234 Branch: 4 Nobranch: 3
       0xc3 Len: 3 Instr: JP None, 0x1234 Branch: 4 Nobranch: 4
-      0xc4 Len: 3 Instr: CALL NZ, 4660 Branch: 6 Nobranch: 3
+      0xc4 Len: 3 Instr: CALL NZ, 0x1234 Branch: 6 Nobranch: 3
       0xc5 Len: 1 Instr: PUSH BC Branch: 4 Nobranch: 4
       0xc6 Len: 2 Instr: ADD8 A, 0x34 Branch: 2 Nobranch: 2
       0xc7 Len: 1 Instr: RST 0x0 Branch: 4 Nobranch: 4
       0xc8 Len: 1 Instr: RET Z Branch: 5 Nobranch: 2
       0xc9 Len: 1 Instr: RET None Branch: 4 Nobranch: 4
       0xca Len: 3 Instr: JP Z, 0x1234 Branch: 4 Nobranch: 3
-      0xcc Len: 3 Instr: CALL Z, 4660 Branch: 6 Nobranch: 3
-      0xcd Len: 3 Instr: CALL None, 4660 Branch: 6 Nobranch: 6
+      0xcc Len: 3 Instr: CALL Z, 0x1234 Branch: 6 Nobranch: 3
+      0xcd Len: 3 Instr: CALL None, 0x1234 Branch: 6 Nobranch: 6
       0xce Len: 2 Instr: ADC  A, 0x34 Branch: 2 Nobranch: 2
       0xcf Len: 1 Instr: RST 0x8 Branch: 4 Nobranch: 4
       0xd0 Len: 1 Instr: RET NC Branch: 5 Nobranch: 2
       0xd1 Len: 1 Instr: POP DE Branch: 3 Nobranch: 3
       0xd2 Len: 3 Instr: JP NC, 0x1234 Branch: 4 Nobranch: 3
-      0xd4 Len: 3 Instr: CALL NC, 4660 Branch: 6 Nobranch: 3
+      0xd4 Len: 3 Instr: CALL NC, 0x1234 Branch: 6 Nobranch: 3
       0xd5 Len: 1 Instr: PUSH DE Branch: 4 Nobranch: 4
       0xd6 Len: 2 Instr: SUB A, 0x34 Branch: 2 Nobranch: 2
       0xd7 Len: 1 Instr: RST 0x10 Branch: 4 Nobranch: 4
       0xd8 Len: 1 Instr: RET C Branch: 5 Nobranch: 2
       0xd9 Len: 1 Instr: RETI Branch: 4 Nobranch: 4
       0xda Len: 3 Instr: JP C, 0x1234 Branch: 4 Nobranch: 3
-      0xdc Len: 3 Instr: CALL C, 4660 Branch: 6 Nobranch: 3
+      0xdc Len: 3 Instr: CALL C, 0x1234 Branch: 6 Nobranch: 3
       0xde Len: 2 Instr: SBC A, 0x34 Branch: 2 Nobranch: 2
       0xdf Len: 1 Instr: RST 0x18 Branch: 4 Nobranch: 4
       0xe0 Len: 2 Instr: LD8 [0xFF00 + 0x34], A Branch: 3 Nobranch: 3
