@@ -1,6 +1,7 @@
 type cartridge_type =
     | ROM_ONLY
     | MBC1
+    | MBC3
 [@@deriving show]
 
 type t = {
@@ -14,15 +15,21 @@ type t = {
 let parse_header bytes =
     let open Core in
     let ctype =
-        match Bigstringaf.unsafe_get bytes 0x0147 |> Char.to_int with
+        match Bigstringaf.get bytes 0x0147 |> Char.to_int with
         | 0x00 -> ROM_ONLY
         | 0x01
         | 0x02
         | 0x03 ->
             MBC1
+        (* | 0x0F *)
+        (* | 0x10 *)
+        | 0x11
+        | 0x12
+        | 0x13 ->
+            MBC3
         | x -> failwith @@ Printf.sprintf "Unsupported ROM type %d" x
     in
-    let rom_size = 2 lsl (Bigstringaf.unsafe_get bytes 0x0148 |> Char.to_int) in
+    let rom_size = 2 lsl (Bigstringaf.get bytes 0x0148 |> Char.to_int) in
     let ram_size =
         match Bigstringaf.unsafe_get bytes 0x0149 |> Char.to_int with
         | 0 -> 0

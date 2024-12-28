@@ -5,11 +5,12 @@ type t = {
 [@@deriving show]
 
 let create bytes =
-    let header = Cartridge_header.parse_header bytes in
+    let header = Cartridge_header.parse_header (Bigstringaf.sub bytes ~off:0 ~len:0x14F) in
     let impl =
         match header.cartridge_type with
         | ROM_ONLY -> Cartridge_intf.build_instance (module Rom_only) bytes header
         | MBC1 -> Cartridge_intf.build_instance (module Mbc1) bytes header
+        | MBC3 -> Cartridge_intf.build_instance (module Mbc3) bytes header
     in
     { header; impl }
 

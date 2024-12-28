@@ -492,7 +492,7 @@ module Make (Bus : Addressable_intf.WordAddressable) = struct
         instr_info.mcycles_nobranch
 
   let handle_interrupt cpu (int : Interrupt_manager.interrupt_type) =
-      Tsdl.Sdl.log "Handling interrupt %s\n" (Interrupt_manager.show_interrupt_type int);
+      (* Tsdl.Sdl.log "Handling interrupt %s\n" (Interrupt_manager.show_interrupt_type int); *)
       Interrupt_manager.set_master_enable cpu.interrupt_manager false;
       Interrupt_manager.acknowledge_interrupt cpu.interrupt_manager int;
       push_stack cpu cpu.pc;

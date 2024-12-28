@@ -61,7 +61,7 @@ let main cpu ppu joypad timer texture renderer =
     in
     let handle_events () =
         let ev = Sdl.Event.create () in
-        if Sdl.poll_event (Some ev) then
+        while Sdl.poll_event (Some ev) do
           let ev_type = Sdl.Event.(get ev typ) in
           match Sdl.Event.enum ev_type with
           | `Key_down -> (
@@ -116,6 +116,7 @@ let main cpu ppu joypad timer texture renderer =
               print_endline "Quitting...";
               exit 0
           | _ -> ()
+        done
     in
     let start_time = ref (Time_ns.now ()) in
     let i = ref 0 in
@@ -176,9 +177,7 @@ let main cpu ppu joypad timer texture renderer =
 let () =
     let open Core in
     let boot_rom = In_channel.read_all "./roms/dmg_boot.bin" in
-    let boot_rom =
-        Bigstringaf.of_string ~off:0 ~len:(String.length boot_rom) boot_rom |> Cartridge.create
-    in
+    let boot_rom = Bigstringaf.of_string ~off:0 ~len:(String.length boot_rom) boot_rom in
     let cartridge =
         (* In_channel.read_all "./test/resources/mooneye/emulator-only/mbc1/bits_bank1.gb" *)
         (* In_channel.read_all "./test/resources/mooneye/emulator-only/mbc1/bits_bank2.gb" *)
@@ -192,10 +191,11 @@ let () =
         (* In_channel.read_all "./test/resources/mooneye/emulator-only/mbc1/rom_4Mb.gb" *)
         (* In_channel.read_all "./test/resources/mooneye/emulator-only/mbc1/rom_8Mb.gb" *)
         (* In_channel.read_all "./test/resources/mooneye/emulator-only/mbc1/rom_16Mb.gb" *)
-        In_channel.read_all "./test/resources/mooneye/emulator-only/mbc1/rom_512kb.gb"
+        (* In_channel.read_all "./test/resources/mooneye/emulator-only/mbc1/rom_512kb.gb" *)
+        (* In_channel.read_all "roms/SuperMarioLand.gb" *)
+        (* In_channel.read_all "./test/resources/mbc3test.gb" *)
+        In_channel.read_all "./roms/PokemonRed.gb"
     in
-
-    (* let cartridge = In_channel.read_all "roms/DrMario.gb" in *)
     let cartridge =
         Bigstringaf.of_string ~off:0 ~len:(String.length cartridge) cartridge |> Cartridge.create
     in

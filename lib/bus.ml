@@ -4,7 +4,7 @@ type t = {
     ppu : Ppu.t;
     wram : Ram.t;
     hram : Ram.t;
-    boot_rom : Cartridge.t;
+    boot_rom : Bigstringaf.t;
     cartridge : Cartridge.t;
     interrupt_manager : Interrupt_manager.t;
     joypad : Joypad.t;
@@ -30,7 +30,7 @@ let create ~ppu ~wram ~hram ~boot_rom ~cartridge ~interrupt_manager ~joypad ~tim
 let read_byte t addr =
     match Uint16.to_int addr with
     | addr_int when (not t.is_boot_rom_disabled) && 0x0000 <= addr_int && addr_int <= 0x00FF ->
-        Cartridge.read_byte t.boot_rom addr
+        Bigstringaf.unsafe_get t.boot_rom addr_int |> uint8_of_char
     | addr_int when Cartridge.accepts_address t.cartridge addr_int ->
         Cartridge.read_byte t.cartridge addr
     | addr_int when 0xC000 <= addr_int && addr_int <= 0xDFFF -> Ram.read_byte t.wram addr
@@ -49,6 +49,7 @@ let read_byte t addr =
     | 0xFF00 -> Joypad.read_byte t.joypad addr
     | 0xFF02 -> Uint8.max_int
     | addr_int when 0xFF04 <= addr_int && addr_int <= 0xFF07 -> Timer.read_byte t.timer addr
+    | addr_int when 0xFF10 <= addr_int && addr_int <= 0xFF26 -> Uint8.max_int (* audio stuff *)
     | 0xFF4D -> Uint8.max_int (* speed switch, gcb only functionality *)
     | _ ->
         failwith @@ Printf.sprintf "Unhandled memory location read %s" (Uint16.to_string_hex addr)

@@ -5,9 +5,7 @@ module Cpu = Cpu.Make (Bus)
 
 let%expect_test "test loading bootrom" =
     let boot_rom = In_channel.read_all "../../roms/dmg_boot.bin" in
-    let boot_rom =
-        Bigstringaf.of_string ~off:0 ~len:(String.length boot_rom) boot_rom |> Cartridge.create
-    in
+    let boot_rom = Bigstringaf.of_string ~off:0 ~len:(String.length boot_rom) boot_rom in
     let cartridge = In_channel.read_all "../../roms/tetris.gb" in
     let cartridge =
         Bigstringaf.of_string ~off:0 ~len:(String.length cartridge) cartridge |> Cartridge.create
