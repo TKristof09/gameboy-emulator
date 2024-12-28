@@ -11,6 +11,7 @@ type t = {
     lcd : Lcd.t;
     mutable mcycles_in_current_mode : int;
     framebuffer : Color.t array array;
+    mutable cur_win_line : int;
   }
 
 type frame_progress =
@@ -29,6 +30,7 @@ let create interrupt_manager =
       lcd = Lcd.create interrupt_manager;
       mcycles_in_current_mode = 0;
       framebuffer = Array.make_matrix ~dimx:160 ~dimy:144 Color.White;
+      cur_win_line = 0;
     }
 
 let accepts_address addr =
@@ -89,10 +91,11 @@ let render_bg_window t ly =
                t.framebuffer.(lx).(ly) <- color)
     and render_win () =
         let wx, wy = Lcd.get_win_pos t.lcd in
-        if wy <= ly && ly <= wy + 256 && wx <= 160 then
+        let wx = wx - 7 in
+        if wy <= ly && wx <= 160 then (
           let win_tile_map = Lcd.get_win_tile_map t.lcd in
           let access_mode = Lcd.get_bg_win_access_mode t.lcd in
-          let y = ly - wy in
+          let y = t.cur_win_line in
           let tile_y = y mod 8 in
           Seq.init (160 - wx) (fun i -> i)
           |> Seq.iter (fun x ->
@@ -102,7 +105,8 @@ let render_bg_window t ly =
                      Tile_data.get_pixel t.tiles access_mode tile_index ~x:tile_x ~y:tile_y
                        t.bg_palette
                  in
-                 t.framebuffer.(x + wx).(ly) <- color)
+                 t.framebuffer.(x + wx).(ly) <- color);
+          t.cur_win_line <- (t.cur_win_line + 1) mod 256)
     in
     render_bg ();
     if Lcd.is_win_enable t.lcd then render_win ()
@@ -110,38 +114,48 @@ let render_bg_window t ly =
 let render_objects t ly =
     let open Core in
     let obj_height = Lcd.get_obj_height t.lcd in
-    Oam.get_objects t.oam
-    |> Array.filter ~f:(fun (o : Oam.obj) ->
-           let y = Uint8.to_int o.y in
-           ly >= y && ly - y <= obj_height - 1)
-    |> Array.iteri ~f:(fun i (o : Oam.obj) ->
-           if i >= 10 then
-             ()
-           else
-             let y = ly - Uint8.to_int o.y in
-             let palette =
-                 match o.palette with
-                 | `OBP0 -> t.obj_palette_0
-                 | `OBP1 -> t.obj_palette_1
-             in
-             Seq.init 8 (fun x -> x)
-             |> Seq.iter (fun x ->
-                    let lx = x + Uint8.to_int o.x in
-                    if lx >= 0 && lx < 160 then
-                      let color_id =
-                          Tile_data.get_pixel_color_id t.tiles Mode_8000 o.tile_index
-                            ~x:(if o.x_flip then 7 - x else x)
-                            ~y:(if o.y_flip then obj_height - y - 1 else y)
-                      in
-                      match color_id with
-                      | ID_0 -> ()
-                      | _ -> (
-                          (* Tsdl.Sdl.log "X:%d   Y:%d" lx ly; *)
-                          match (o.priority, t.framebuffer.(lx).(ly)) with
-                          | `OBJ_prio, _
-                          | _, White ->
-                              t.framebuffer.(lx).(ly) <- Palette.get_color palette color_id
-                          | _ -> ())))
+    let objects =
+        Oam.get_objects t.oam
+        |> Array.filter ~f:(fun (o : Oam.obj) ->
+               let y = Uint8.to_int o.y in
+               ly >= y && ly - y <= obj_height - 1)
+    in
+    let objects = Array.sub objects ~pos:0 ~len:(min 10 (Array.length objects)) in
+    Array.stable_sort objects ~compare:(fun (o : Oam.obj) (o' : Oam.obj) -> Uint8.compare o.x o'.x);
+    (* need to do rev separately because just flipping the compare makes the objects with same x be in wrong order  but it is just 10 elements so whatever *)
+    Array.rev_inplace objects;
+    objects
+    |> Array.iter ~f:(fun (o : Oam.obj) ->
+           let y = ly - Uint8.to_int o.y in
+           let palette =
+               match o.palette with
+               | `OBP0 -> t.obj_palette_0
+               | `OBP1 -> t.obj_palette_1
+           in
+           Seq.init 8 (fun x -> x)
+           |> Seq.iter (fun x ->
+                  let lx = x + Uint8.to_int o.x in
+                  if lx >= 0 && lx < 160 then
+                    let tile_index =
+                        if obj_height = 8 then
+                          o.tile_index
+                        else
+                          Uint8.(logand o.tile_index (of_int 0b1111_1110))
+                    in
+                    let color_id =
+                        Tile_data.get_pixel_color_id t.tiles Mode_8000 tile_index
+                          ~x:(if o.x_flip then 7 - x else x)
+                          ~y:(if o.y_flip then obj_height - y - 1 else y)
+                    in
+                    match color_id with
+                    | ID_0 -> ()
+                    | _ -> (
+                        (* Tsdl.Sdl.log "X:%d   Y:%d" lx ly; *)
+                        match (o.priority, t.framebuffer.(lx).(ly)) with
+                        | `OBJ_prio, _
+                        | _, White ->
+                            t.framebuffer.(lx).(ly) <- Palette.get_color palette color_id
+                        | _ -> ())))
 
 let execute t ~mcycles =
     t.mcycles_in_current_mode <- t.mcycles_in_current_mode + mcycles;
@@ -182,6 +196,7 @@ let execute t ~mcycles =
             else (
               Lcd.reset_ly t.lcd;
               Lcd.set_mode t.lcd `OAM_search;
+              t.cur_win_line <- 0;
               Finished t.framebuffer))
           else
             In_progress

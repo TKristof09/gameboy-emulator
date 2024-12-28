@@ -11,6 +11,13 @@ bug-reports: "https://github.com/TKristof09/gameboy-emulator/issues"
 depends: [
   "ocaml"
   "dune" {>= "3.16"}
+  "core"
+  "ppx_deriving"
+  "stdint"
+  "bigstringaf"
+  "tsdl"
+  "tsdl-ttf"
+  "imagelib"
   "odoc" {with-doc}
 ]
 build: [

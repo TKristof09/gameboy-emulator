@@ -135,7 +135,7 @@ let main cpu ppu joypad timer texture renderer =
       (match instr with
       (* | LD8 (Reg8 D, Imm8 v) when Uint.Uint8.to_int v = 0x42 -> pause_emu () *)
       (* | RET Z -> pause_emu () *)
-      (* | LD8 (Reg8 B, Reg8 B) -> pause_emu () *)
+      | LD8 (Reg8 B, Reg8 B) -> pause_emu ()
       | _ -> ());
       (match !bp with
       | None -> ()
@@ -214,7 +214,7 @@ let () =
     TODO: PPU state isn't set upcorrectly when skipping bootrom
     Mode needs to be VBLank and perhaps other stuff, need to check
     *)
-    Cpu.skip_boot_rom cpu;
+    (* Cpu.skip_boot_rom cpu; *)
     Sdl.init Sdl.Init.(video + events) |> sdl_check;
     let win, renderer =
         Sdl.create_window_and_renderer ~w:scaled_width ~h:scaled_height Sdl.Window.windowed

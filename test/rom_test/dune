@@ -1,7 +1,7 @@
 (library
  (name gameboy_rom_test)
- (libraries gameboy core)
+ (libraries gameboy core imagelib imagelib.unix)
  (inline_tests
-  (deps ../../roms/dmg_boot.bin ../../roms/tetris.gb))
+  (deps ../../roms/dmg_boot.bin ../../roms/tetris.gb ../resources/dmg-acid2.gb ../resources/dmg-acid2-reference.png))
  (preprocess
   (pps ppx_jane)))

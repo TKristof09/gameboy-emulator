@@ -17,7 +17,7 @@
  (name gameboy)
  (synopsis "A Gameboy emulator")
  (description "A Gameboy emulator")
- (depends ocaml dune)
+ (depends ocaml dune core ppx_deriving stdint bigstringaf tsdl tsdl-ttf imagelib)
  (tags
   (topics "gameboy" "emulator")))
 
