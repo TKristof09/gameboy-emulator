@@ -21,12 +21,23 @@ type t = {
   }
 [@@deriving show]
 
+let try_load_ram (header : Cartridge_header.t) =
+    if not header.has_battery then
+      Bigstringaf.create (header.ram_size * 0x2000)
+    else
+      try
+        let filename = Printf.sprintf "./ram_files/%s.bin" header.title in
+        let bytes = Core.In_channel.read_all filename in
+        Bigstringaf.of_string ~off:0 ~len:(String.length bytes) bytes
+      with
+      | _ -> Bigstringaf.create (header.ram_size * 0x2000)
+
 let create bytes (header : Cartridge_header.t) =
     let num_rom_banks = header.rom_size in
     let num_ram_banks = header.ram_size in
     {
       rom_bytes = bytes;
-      ram_bytes = Bigstringaf.create (num_ram_banks * 0x2000);
+      ram_bytes = try_load_ram header;
       num_rom_banks;
       num_ram_banks;
       mapped_rom_bank = 1;
@@ -105,3 +116,7 @@ let write_byte t ~addr ~data =
 
 let accepts_address addr_int =
     (0x0000 <= addr_int && addr_int <= 0x7FFF) || (0xA000 <= addr_int && addr_int <= 0xBFFF)
+
+let save_ram t filename =
+    let out_channel = Out_channel.open_bin filename in
+    Out_channel.output_string out_channel (Bigstringaf.to_string t.ram_bytes)

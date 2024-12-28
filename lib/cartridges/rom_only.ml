@@ -12,3 +12,4 @@ let write_byte _t ~addr ~data:_ =
     Tsdl.Sdl.log "Can't write to cartridge ROM: %s\n" (Uint16.to_string_hex addr)
 
 let accepts_address addr_int = 0x0000 <= addr_int && addr_int <= 0x7FFF
+let save_ram _ _ = ()

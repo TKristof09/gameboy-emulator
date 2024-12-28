@@ -25,3 +25,10 @@ let write_byte t ~addr ~data =
 let accepts_address t addr_int =
     let module M = (val t.impl : Cartridge_intf.Instance) in
     M.Cartridge_type.accepts_address addr_int
+
+let save_ram t =
+    if t.header.has_battery then (
+      let filename = Printf.sprintf "./ram_files/%s.bin" t.header.title in
+      let module M = (val t.impl : Cartridge_intf.Instance) in
+      M.Cartridge_type.save_ram M.this filename;
+      Tsdl.Sdl.log "Wrote RAM to %s\n" filename)

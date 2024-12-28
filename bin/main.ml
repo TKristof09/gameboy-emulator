@@ -51,6 +51,7 @@ let render_framebuffer renderer texture fb =
     Sdl.render_copy renderer texture |> sdl_check
 
 let main cpu ppu joypad timer texture renderer =
+    let should_close = ref false in
     let pause = ref false in
     let step = ref false in
     let bp = ref None in
@@ -94,7 +95,7 @@ let main cpu ppu joypad timer texture renderer =
               | `A -> Joypad.press joypad B
               | `E -> Joypad.press joypad Start
               | `I -> Joypad.press joypad Select
-              | `Escape -> exit 0
+              | `Escape -> should_close := true
               | _ -> ())
           | `Key_up -> (
               let scancode = Sdl.Event.(get ev keyboard_scancode) |> Sdl.Scancode.enum in
@@ -112,16 +113,14 @@ let main cpu ppu joypad timer texture renderer =
               step := true;
               render_text renderer (Printf.sprintf "%s" (Cpu.show cpu)) ~x:0 ~y:60;
               Sdl.render_present renderer
-          | `Quit ->
-              print_endline "Quitting...";
-              exit 0
+          | `Quit -> should_close := true
           | _ -> ()
         done
     in
     let start_time = ref (Time_ns.now ()) in
     let i = ref 0 in
     let fps = ref 0 in
-    while true do
+    while not !should_close do
       while !pause && not !step do
         handle_events ();
         render_text renderer "--PAUSED--" ~x:0 ~y:10;
@@ -135,7 +134,7 @@ let main cpu ppu joypad timer texture renderer =
       (match instr with
       (* | LD8 (Reg8 D, Imm8 v) when Uint.Uint8.to_int v = 0x42 -> pause_emu () *)
       (* | RET Z -> pause_emu () *)
-      | LD8 (Reg8 B, Reg8 B) -> pause_emu ()
+      (* | LD8 (Reg8 B, Reg8 B) -> pause_emu () *)
       | _ -> ());
       (match !bp with
       | None -> ()
@@ -150,9 +149,6 @@ let main cpu ppu joypad timer texture renderer =
       | Finished framebuffer ->
           handle_events ();
           render_framebuffer renderer texture framebuffer;
-          (* render_text renderer *)
-          (*   (Printf.sprintf "PC: %#x  - %s" pc (Instruction.show instr)) *)
-          (*   ~x:0 ~y:20; *)
           (* let open Time_ns.Span in *)
           (* let duration = Time_ns.diff (Time_ns.now ()) !start_time in *)
           (* if duration < target_frame_time then *)
@@ -192,6 +188,7 @@ let () =
         (* In_channel.read_all "./test/resources/mooneye/emulator-only/mbc1/rom_8Mb.gb" *)
         (* In_channel.read_all "./test/resources/mooneye/emulator-only/mbc1/rom_16Mb.gb" *)
         (* In_channel.read_all "./test/resources/mooneye/emulator-only/mbc1/rom_512kb.gb" *)
+        (* In_channel.read_all "./roms/tetris.gb" *)
         (* In_channel.read_all "roms/SuperMarioLand.gb" *)
         (* In_channel.read_all "./test/resources/mbc3test.gb" *)
         In_channel.read_all "./roms/PokemonRed.gb"
@@ -214,7 +211,7 @@ let () =
     TODO: PPU state isn't set upcorrectly when skipping bootrom
     Mode needs to be VBLank and perhaps other stuff, need to check
     *)
-    (* Cpu.skip_boot_rom cpu; *)
+    Cpu.skip_boot_rom cpu;
     Sdl.init Sdl.Init.(video + events) |> sdl_check;
     let win, renderer =
         Sdl.create_window_and_renderer ~w:scaled_width ~h:scaled_height Sdl.Window.windowed
@@ -227,6 +224,7 @@ let () =
     in
 
     main cpu ppu joypad timer texture renderer;
+    Cartridge.save_ram cartridge;
 
     Sdl.destroy_window win;
     Sdl.destroy_renderer renderer;

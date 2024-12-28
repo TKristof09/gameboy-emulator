@@ -98,3 +98,7 @@ let write_byte t ~addr ~data =
 
 let accepts_address addr_int =
     (0x0000 <= addr_int && addr_int <= 0x7FFF) || (0xA000 <= addr_int && addr_int <= 0xBFFF)
+
+let save_ram t filename =
+    let out_channel = Out_channel.open_bin filename in
+    Out_channel.output_string out_channel (Bigstringaf.to_string t.ram_bytes)
